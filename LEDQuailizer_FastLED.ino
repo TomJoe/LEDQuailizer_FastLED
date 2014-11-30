@@ -10,8 +10,8 @@
 
 #define BRIGHTNESS  255
 #define FRAMES_PER_SECOND 50
-#define DECAY_PER_FRAME 5 //mit dem Wert kannst rumspielen 0.0 - 1.0
-#define CUT_OFF_LEVEL 50 //mit dem Wert kannst rumspielen - 1024
+#define DECAY_PER_FRAME 10 //mit dem Wert kannst rumspielen 0.0 - 1.0
+#define CUT_OFF_LEVEL 100 //mit dem Wert kannst rumspielen - 1024
 
 CRGB leds[NUM_LEDS];
 CRGBPalette16 gPal, nPal;
@@ -58,7 +58,7 @@ void AudioFire() {
     double middleIdx = (NUM_LEDS/14.0)*(1+2*i);
     
     //double pulseLength = FreqValCache[i] / 50;
-    double pulseLength = NUM_LEDS/14;
+    double pulseLength = NUM_LEDS/14 + 2;
     int brightness = FreqValCache[i];
   
     double palStart = 240.0;

@@ -1,32 +1,68 @@
 #include <FastLED.h>
 #include <AudioAnalyzer.h>
 
+//#define RENE //so lassen, dann sollte es klappen
+
+#ifdef RENE
+
+#define DATA_PIN      5 //Anpassen
+#define COLOR_ORDER   GRB //Anpassen
+#define CHIPSET       WS2811 //CHIPSET anpassen
+#define NUM_LEDS      50 //Anpassen
+
+#else
+
 #define LED_PIN     5 //Anpassen
 #define CLK_PIN     6 //brauchst du nicht
 #define SPI_SPEED   DATA_RATE_MHZ(1)
 #define COLOR_ORDER BGR //Anpassen
 #define CHIPSET     WS2801 //CHIPSET anpassen
-#define NUM_LEDS    50 //Anpassen
+#define NUM_LEDS    0 //Anpassen
+
+#endif
 
 #define BRIGHTNESS  255
 #define FRAMES_PER_SECOND 50
-#define DECAY_PER_FRAME 10 //mit dem Wert kannst rumspielen 0.0 - 1.0
-#define CUT_OFF_LEVEL 100 //mit dem Wert kannst rumspielen - 1024
+#define DECAY_PER_FRAME 0.5 //mit dem Wert kannst rumspielen 0.0 - 1.0
+#define MIN_CUT_OFF_LEVEL 100 //mit dem Wert kannst rumspielen - 1024
+#define INI_CUT_OFF_LEVEL 100  // momentan funktionslos
+#define CUT_OFF_DECY_PER_FRAME 1 // momentan funktionslos
 
 CRGB leds[NUM_LEDS];
 CRGBPalette16 gPal, nPal;
 
-Analyzer Audio = Analyzer(4,3,A5); //Strobe pin ->3  RST pin ->4 Analog Pin ->5 //Anpassen
+#ifdef RENE
+
+  Analyzer Audio = Analyzer(6,7,0); //Strobe pin ->6  RST pin ->7 Analog Pin ->0 //Anpassen
+
+#else
+
+  Analyzer Audio = Analyzer(4,3,A5)   ; //Strobe pin ->4  RST pin ->3 Analog Pin ->5 //Anpassen
+
+#endif
+
 int FreqVal[7];
-int FreqValCache[7];
+int FreqValLevel[7];
+int FreqValCutOff[7];
 
 void setup() {
   //delay(3000); // sanity delay
   Serial.begin(57600);
+  
+  #ifdef RENE
+  
+  FastLED.addLeds<CHIPSET, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS);  
+  
+  #else
+  
   FastLED.addLeds<CHIPSET, LED_PIN, CLK_PIN, COLOR_ORDER, SPI_SPEED>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );
+  
+  #endif
+  
   FastLED.setBrightness( BRIGHTNESS );
-  gPal = HeatColors_p;
-  nPal = PartyColors_p;
+  for(int i = 0; i<7; i++) FreqValCutOff[i] = INI_CUT_OFF_LEVEL;
+  //gPal = HeatColors_p;
+  gPal = PartyColors_p;
   Audio.Init();
 }
 
@@ -35,7 +71,6 @@ void loop()
   // Add entropy to random number generator; we use a lot of it.
   random16_add_entropy( random());
 
-  //FireLight(); //Diese Funktion ein / auskommentieren fur nette Animation
   AudioFire(); //Diese Funktion ein / auskommentieren fur Audio
 
   FastLED.show(); // display this frame
@@ -50,108 +85,53 @@ void AudioFire() {
   fill_solid(leds, NUM_LEDS, 0);
   
   for(int i = 0; i < 7; i++){
-    if((FreqVal[i] - CUT_OFF_LEVEL) > FreqValCache[i]) FreqValCache[i] = FreqVal[i] - CUT_OFF_LEVEL;
-    Serial.print(max(FreqVal[i]-CUT_OFF_LEVEL,0));//Transimit the DC value of the seven bands
+    if((FreqVal[i] - FreqValCutOff[i]) > FreqValLevel[i]){
+      FreqValLevel[i] = FreqVal[i] - FreqValCutOff[i];
+      //FreqValCutOff[i] = FreqVal[i] / 2;
+    }
+    Serial.print(max(FreqVal[i]-FreqValCutOff[i],0));//Transimit the DC value of the seven bands
     if(i<6)  Serial.print(",");
     else Serial.println();
     
     double middleIdx = (NUM_LEDS/14.0)*(1+2*i);
     
     //double pulseLength = FreqValCache[i] / 50;
-    double pulseLength = NUM_LEDS/14 + 2;
-    int brightness = FreqValCache[i];
-  
-    double palStart = 240.0;
-    double palStep = -abs((240.0/(pulseLength))); 
+    double pulseLength = NUM_LEDS/14 +2;
+      
+    //double palStart = 240.0; //good in FirePalette
+    double palStart = 32 * i;
+    //double palStep = -abs((240.0/(pulseLength))); 
+    //double palStep = abs((50.0/(pulseLength))); 
+    double palStep = 0;
+    double brightnessDecay = 0.5;
 
-    fill_palette_float(leds , middleIdx , middleIdx + pulseLength , palStart, palStep, gPal, brightness, BLEND);
-    fill_palette_float(leds , middleIdx , middleIdx - pulseLength , palStart, palStep, gPal, brightness, BLEND);
+    fill_palette_float(leds , middleIdx , middleIdx + pulseLength , palStart, palStep, gPal, FreqValLevel[i] , brightnessDecay,BLEND);
+    fill_palette_float(leds , middleIdx , middleIdx - pulseLength , palStart, palStep, gPal, FreqValLevel[i] , brightnessDecay,BLEND);
     
-    FreqValCache[i] =  FreqValCache[i] - DECAY_PER_FRAME;
-    if(FreqValCache[i] < 0) FreqValCache[i] = 0; 
+    FreqValLevel[i] =  FreqValLevel[i] * DECAY_PER_FRAME;
+    if(FreqValLevel[i] < 0) FreqValLevel[i] = 0; 
+    //FreqValCutOff[i] -= CUT_OFF_DECY_PER_FRAME;
+    //if(FreqValLevel[i] < MIN_CUT_OFF_LEVEL) FreqValLevel[i] = MIN_CUT_OFF_LEVEL; 
   }
 
 }
 
-void FireLight() {
-  static int frame = 0;
-  frame++;
-   fill_solid(leds, NUM_LEDS, 0);
-  //if(frame > FRAMES_PER_SECOND * 20) frame = 0;
 
-  double pulseLength = 10.0  + (10 * sin(frame / 500.0));
-  double middleIdx = NUM_LEDS/2 + (NUM_LEDS/2 * sin(frame / 200.0));
 
-  double palStart = 128.0;
-  double palStep = -abs((128.0/(pulseLength)));
-
- 
-  fill_palette_float(leds , middleIdx , middleIdx + pulseLength , palStart, palStep, gPal, BRIGHTNESS, BLEND);
-  fill_palette_float(leds , middleIdx , middleIdx - pulseLength , palStart, palStep, gPal, BRIGHTNESS, BLEND);
-  
-  pulseLength = 10.0  * + (10 * sin(frame / 400.0));
-  middleIdx = NUM_LEDS/2 + (NUM_LEDS/2 * sin(frame / 25.0));
-
-  palStart = 128.0;
-  palStep = -abs((128.0/(pulseLength)));
-  
-  fill_palette_float(leds , middleIdx , middleIdx + pulseLength , palStart, palStep, nPal, BRIGHTNESS, BLEND);
-  fill_palette_float(leds , middleIdx , middleIdx - pulseLength , palStart, palStep, nPal, BRIGHTNESS, BLEND);
-  
-  
-
-}
-
-void fill_palette_float(CRGB* pLeds , int pLedStartIdx , int pLedEndIdx , double pPalStart, double pPalStep, const CRGBPalette16& pGPal, uint8_t pBrightness, TBlendType blendType) {
+void fill_palette_float(CRGB* pLeds , int pLedStartIdx , int pLedEndIdx , double pPalStart, double pPalStep, const CRGBPalette16& pGPal, uint8_t pBrightness, double pBrightnessDecay, TBlendType blendType) {
 
   if (pLedStartIdx < pLedEndIdx) {
     for (; pLedStartIdx < pLedEndIdx; pLedStartIdx++) {
       if(pLedStartIdx >= 0 && pLedStartIdx < NUM_LEDS) pLeds[pLedStartIdx] =  pLeds[pLedStartIdx] + ColorFromPalette( pGPal, pPalStart, pBrightness, blendType);
       pPalStart += pPalStep;
+      pBrightness *= pBrightnessDecay;
     }
   } else {
     for (; pLedStartIdx > pLedEndIdx; pLedStartIdx--) {
       if(pLedStartIdx >= 0 && pLedStartIdx < NUM_LEDS) pLeds[pLedStartIdx] = pLeds[pLedStartIdx] + ColorFromPalette( pGPal, pPalStart, pBrightness, blendType);
       pPalStart += pPalStep;
+      pBrightness *= pBrightnessDecay;
     }
   }
 
-};
-// COOLING: How much does the air cool as it rises?
-// Less cooling = taller flames.  More cooling = shorter flames.
-// Default 50, suggested range 20-100
-#define COOLING  55
-
-// SPARKING: What chance (out of 255) is there that a new spark will be lit?
-// Higher chance = more roaring fire.  Lower chance = more flickery fire.
-// Default 120, suggested range 50-200.
-#define SPARKING 120
-
-
-void Fire2012()
-{
-  // Array of temperature readings at each simulation cell
-  static byte heat[NUM_LEDS];
-
-  // Step 1.  Cool down every cell a little
-  for ( int i = 0; i < NUM_LEDS; i++) {
-    heat[i] = qsub8( heat[i],  random8(0, ((COOLING * 10) / NUM_LEDS) + 2));
-  }
-
-  // Step 2.  Heat from each cell drifts 'up' and diffuses a little
-  for ( int k = NUM_LEDS - 1; k >= 2; k--) {
-    heat[k] = (heat[k - 1] + heat[k - 2] + heat[k - 2] ) / 3;
-  }
-
-  // Step 3.  Randomly ignite new 'sparks' of heat near the bottom
-  if ( random8() < SPARKING ) {
-    int y = random8(7);
-    heat[y] = qadd8( heat[y], random8(160, 255) );
-  }
-
-  // Step 4.  Map from heat cells to LED colors
-  for ( int j = 0; j < NUM_LEDS; j++) {
-    leds[j] = HeatColor( heat[j]);
-  }
 }
-

@@ -1,7 +1,7 @@
 #include <FastLED.h>
 #include <AudioAnalyzer.h>
 
-//#define RENE //so lassen, dann sollte es klappen
+//                                        #define RENE //so lassen, dann sollte es klappen
 
 #ifdef RENE
 
@@ -60,8 +60,8 @@ void setup() {
 
   FastLED.setBrightness( BRIGHTNESS );
   for (int i = 0; i < 7; i++) FreqValCutOff[i] = MIN_CUT_OFF_LEVEL;
-  gPal = HeatColors_p;
-  //gPal = PartyColors_p;
+  //gPal = HeatColors_p;
+  gPal = PartyColors_p;
   Audio.Init();
 }
 
@@ -109,7 +109,7 @@ void AudioFire() {
         pulseLength = (NUM_LEDS / 4);
         palStart = 255;
         palStep = -5.0;
-        brightnessDecay = 0.8;
+        brightnessDecay = 0.5;
         break;
 
       case 2:

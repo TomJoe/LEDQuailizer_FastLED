@@ -17,7 +17,7 @@
 #define SPI_SPEED   DATA_RATE_MHZ(1)
 #define COLOR_ORDER BGR //Anpassen
 #define CHIPSET     WS2801 //CHIPSET anpassen
-#define NUM_LEDS    0 //Anpassen
+#define NUM_LEDS    80 //Anpassen
 
 #endif
 

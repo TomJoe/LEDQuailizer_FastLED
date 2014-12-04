@@ -23,9 +23,15 @@
 
 #define BRIGHTNESS  255
 #define FRAMES_PER_SECOND 50
-#define DECAY_PER_FRAME 0.1 //mit dem Wert kannst rumspielen 0.0 - 1.0
-#define MIN_CUT_OFF_LEVEL 50 //mit dem Wert kannst rumspielen - 1024
-#define CUT_OFF_DECY_PER_FRAME 1 // momentan funktionslos
+#define DECAY_PER_FRAME 0.3 //mit dem Wert kannst rumspielen 0.0 - 1.0
+#define MIN_CUT_OFF_LEVEL_0 0//50
+#define MIN_CUT_OFF_LEVEL_1 0//50
+#define MIN_CUT_OFF_LEVEL_2 0//70
+#define MIN_CUT_OFF_LEVEL_3 0//90
+#define MIN_CUT_OFF_LEVEL_4 0//150
+#define MIN_CUT_OFF_LEVEL_5 0//150
+#define MIN_CUT_OFF_LEVEL_6 0//100
+//mit dem Wert kannst rumspielen - 1024
 
 CRGB leds[NUM_LEDS];
 CRGBPalette16 gPal, nPal;
@@ -42,7 +48,8 @@ Analyzer Audio = Analyzer(4, 3, A5)   ; //Strobe pin ->4  RST pin ->3 Analog Pin
 
 int FreqVal[7];
 int FreqValLevel[7];
-int FreqValCutOff[7];
+int FreqVqlAvg[7];
+int FreqValMinCutOffLevel[7];
 
 void setup() {
   //delay(3000); // sanity delay
@@ -59,9 +66,22 @@ void setup() {
 #endif
 
   FastLED.setBrightness( BRIGHTNESS );
-  for (int i = 0; i < 7; i++) FreqValCutOff[i] = MIN_CUT_OFF_LEVEL;
+
+  FreqValMinCutOffLevel[0] = MIN_CUT_OFF_LEVEL_0;
+  FreqValMinCutOffLevel[1] = MIN_CUT_OFF_LEVEL_1;
+  FreqValMinCutOffLevel[2] = MIN_CUT_OFF_LEVEL_2;
+  FreqValMinCutOffLevel[3] = MIN_CUT_OFF_LEVEL_3;
+  FreqValMinCutOffLevel[4] = MIN_CUT_OFF_LEVEL_4;
+  FreqValMinCutOffLevel[5] = MIN_CUT_OFF_LEVEL_5;
+  FreqValMinCutOffLevel[6] = MIN_CUT_OFF_LEVEL_6;
+
+  for (int i = 0; i < 7; i++) {
+
+    FreqVqlAvg[i] = FreqValMinCutOffLevel[i];
+
+  }
   gPal = HeatColors_p;
-  //gPal = PartyColors_p;
+  nPal = PartyColors_p;
   Audio.Init();
 }
 
@@ -70,13 +90,86 @@ void loop()
   // Add entropy to random number generator; we use a lot of it.
   random16_add_entropy( random());
 
-  AudioFire(); //Diese Funktion ein / auskommentieren fur Audio
+  //AudioFire(1);
+  AudioFireMode2(2);
 
   FastLED.show(); // display this frame
   FastLED.delay(1000 / FRAMES_PER_SECOND);
 }
 
-void AudioFire() {
+void AudioFireMode2(int mode) {
+
+  static int frame = 0;
+  static int state[7];
+  static int hold[7];
+  frame++;
+
+  Audio.ReadFreq(FreqVal);
+  fill_solid(leds, NUM_LEDS, 0);
+
+  for (int i = 0; i < 7; i++) {
+    if (FreqVal[i] > (1.5 * FreqVqlAvg[i])) {
+      FreqValLevel[i] = 128;
+      if (hold[i] == 0) {
+        state[i]++;
+        if (state[i] > 16) state[i] = 0;
+      }
+      hold[i] = 1;
+    } else {
+      hold[i] = 0;
+    }
+
+    FreqVqlAvg[i] = ((9) * FreqVqlAvg[i] + FreqVal[i]) / 10;
+    if (FreqVqlAvg[i] < FreqValMinCutOffLevel[i] ) FreqVqlAvg[i] = FreqValMinCutOffLevel[i] ;
+
+    Serial.print(FreqVqlAvg[i]);//Transimit the DC value of the seven bands
+  
+    /*if (i < 6)  Serial.print(",");
+    else Serial.println();*/
+
+    double middleIdx;
+    double pulseLength;
+    double palStart;
+    double palStep;
+    double brightnessDecay;
+
+
+    switch (i) {
+      case 0:
+      case 1:
+      case 2:
+        middleIdx = (NUM_LEDS / 6) * ((2*i) + 1);
+        pulseLength = (NUM_LEDS / 4);
+        palStart = 255 - (32 * i);
+        palStep = 0;
+        brightnessDecay = 0.8;
+        break;      
+
+      case 3:
+
+      case 4:
+
+      case 5:
+
+      case 6:
+        middleIdx = (NUM_LEDS / 16.0) * (state[i]);
+        pulseLength = (FreqVal[i] - FreqVqlAvg[i]) / NUM_LEDS * 2;
+        palStart = (i * 32);
+        palStep = +2.0;
+        brightnessDecay = 0.8;
+        break;
+    }
+
+    fill_palette_float(leds , middleIdx , middleIdx + pulseLength , palStart, palStep, nPal, FreqValLevel[i] , brightnessDecay, BLEND);
+    fill_palette_float(leds , middleIdx , middleIdx - pulseLength , palStart, palStep, nPal, FreqValLevel[i] , brightnessDecay, BLEND);
+
+    FreqValLevel[i] =  FreqValLevel[i] * DECAY_PER_FRAME;
+    if (FreqValLevel[i] < 0) FreqValLevel[i] = 0;
+  }
+
+}
+
+void AudioFire(int mode) {
   static int frame = 0;
   frame++;
 
@@ -84,28 +177,28 @@ void AudioFire() {
   fill_solid(leds, NUM_LEDS, 0);
 
   for (int i = 0; i < 7; i++) {
-    if (FreqVal[i] > (1.5 * FreqValCutOff[i])) {
+    if (FreqVal[i] > (1.5 * FreqVqlAvg[i])) {
       FreqValLevel[i] = 128;
     }
 
-    FreqValCutOff[i] = ((FRAMES_PER_SECOND - 1) * FreqValCutOff[i] + FreqVal[i]) / FRAMES_PER_SECOND;
-    if (FreqValCutOff[i] < MIN_CUT_OFF_LEVEL) FreqValCutOff[i] = MIN_CUT_OFF_LEVEL;
+    FreqVqlAvg[i] = ((9) * FreqVqlAvg[i] + FreqVal[i]) / 10;
+    if (FreqVqlAvg[i] < FreqValMinCutOffLevel[i] ) FreqVqlAvg[i] = FreqValMinCutOffLevel[i] ;
 
-    Serial.print(FreqValCutOff[i]);//Transimit the DC value of the seven bands
-    if (i < 6)  Serial.print(",");
-    else Serial.println();
+    Serial.print(FreqVqlAvg[i]);//Transimit the DC value of the seven bands
+    /*if (i < 6)  Serial.print(",");
+    else Serial.println();*/
 
     double middleIdx;
     double pulseLength;
     double palStart;
-    double palStep; 
+    double palStep;
     double brightnessDecay;
 
 
     switch (i) {
       case 0:
       case 1:
-        middleIdx = (NUM_LEDS / 4) * (1 + i*2);
+        middleIdx = (NUM_LEDS / 4) * (1 + i * 2);
         pulseLength = (NUM_LEDS / 4);
         palStart = 255;
         palStep = -5.0;
@@ -113,13 +206,13 @@ void AudioFire() {
         break;
 
       case 2:
-  
+
       case 3:
-     
+
       case 4:
-        
+
       case 5:
-        
+
       case 6:
         middleIdx = (NUM_LEDS / 10.0) * ((2 * i) - 3);
         pulseLength = NUM_LEDS / 5;
@@ -128,25 +221,13 @@ void AudioFire() {
         brightnessDecay = 0.4;
         break;
     }
-    //double middleIdx = (NUM_LEDS / 14.0) * (1 + 2 * i);
-
-    //double pulseLength = FreqValCache[i] / 50;
-    //double pulseLength = NUM_LEDS / 14;
-
-    //double palStart = 240.0; //good in FirePalette
-    //double palStart = 32 * i;
-    //double palStep = -abs((240.0/(pulseLength)));
-    //double palStep = abs((50.0/(pulseLength)));
-    //double palStep = 0;
-    //double brightnessDecay = 0.5;
 
     fill_palette_float(leds , middleIdx , middleIdx + pulseLength , palStart, palStep, gPal, FreqValLevel[i] , brightnessDecay, BLEND);
     fill_palette_float(leds , middleIdx , middleIdx - pulseLength , palStart, palStep, gPal, FreqValLevel[i] , brightnessDecay, BLEND);
 
     FreqValLevel[i] =  FreqValLevel[i] * DECAY_PER_FRAME;
     if (FreqValLevel[i] < 0) FreqValLevel[i] = 0;
-    //FreqValCutOff[i] -= CUT_OFF_DECY_PER_FRAME;
-    //if(FreqValLevel[i] < MIN_CUT_OFF_LEVEL) FreqValLevel[i] = MIN_CUT_OFF_LEVEL;
+
   }
 
 }

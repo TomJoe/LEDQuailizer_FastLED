@@ -1,7 +1,7 @@
 #include <FastLED.h>
 #include <AudioAnalyzer.h>
 
-#define RENE //so lassen, dann sollte es klappen
+//#define RENE //so lassen, dann sollte es klappen
 
 #ifdef RENE
 
@@ -24,13 +24,13 @@
 #define BRIGHTNESS  255
 #define FRAMES_PER_SECOND 50
 #define DECAY_PER_FRAME 0.3 //mit dem Wert kannst rumspielen 0.0 - 1.0
-#define MIN_CUT_OFF_LEVEL_0 0//50
-#define MIN_CUT_OFF_LEVEL_1 0//50
-#define MIN_CUT_OFF_LEVEL_2 0//70
-#define MIN_CUT_OFF_LEVEL_3 0//90
-#define MIN_CUT_OFF_LEVEL_4 0//150
-#define MIN_CUT_OFF_LEVEL_5 0//150
-#define MIN_CUT_OFF_LEVEL_6 0//100
+#define INI_CUT_OFF_LEVEL_0 0//50
+#define INI_CUT_OFF_LEVEL_1 0//50
+#define INI_CUT_OFF_LEVEL_2 0//70
+#define INI_CUT_OFF_LEVEL_3 0//90
+#define INI_CUT_OFF_LEVEL_4 0//150
+#define INI_CUT_OFF_LEVEL_5 0//150
+#define INI_CUT_OFF_LEVEL_6 0//100
 //mit dem Wert kannst rumspielen - 1024
 
 CRGB leds[NUM_LEDS];
@@ -48,7 +48,7 @@ Analyzer Audio = Analyzer(4, 3, A5)   ; //Strobe pin ->4  RST pin ->3 Analog Pin
 
 int FreqVal[7];
 int FreqValLevel[7];
-int FreqVqlAvg[7];
+double FreqVqlAvg[7];
 int FreqValMinCutOffLevel[7];
 
 void setup() {
@@ -67,13 +67,13 @@ void setup() {
 
   FastLED.setBrightness( BRIGHTNESS );
 
-  FreqValMinCutOffLevel[0] = MIN_CUT_OFF_LEVEL_0;
-  FreqValMinCutOffLevel[1] = MIN_CUT_OFF_LEVEL_1;
-  FreqValMinCutOffLevel[2] = MIN_CUT_OFF_LEVEL_2;
-  FreqValMinCutOffLevel[3] = MIN_CUT_OFF_LEVEL_3;
-  FreqValMinCutOffLevel[4] = MIN_CUT_OFF_LEVEL_4;
-  FreqValMinCutOffLevel[5] = MIN_CUT_OFF_LEVEL_5;
-  FreqValMinCutOffLevel[6] = MIN_CUT_OFF_LEVEL_6;
+  FreqValMinCutOffLevel[0] = INI_CUT_OFF_LEVEL_0;
+  FreqValMinCutOffLevel[1] = INI_CUT_OFF_LEVEL_1;
+  FreqValMinCutOffLevel[2] = INI_CUT_OFF_LEVEL_2;
+  FreqValMinCutOffLevel[3] = INI_CUT_OFF_LEVEL_3;
+  FreqValMinCutOffLevel[4] = INI_CUT_OFF_LEVEL_4;
+  FreqValMinCutOffLevel[5] = INI_CUT_OFF_LEVEL_5;
+  FreqValMinCutOffLevel[6] = INI_CUT_OFF_LEVEL_6;
 
   for (int i = 0; i < 7; i++) {
 
@@ -97,157 +97,7 @@ void loop()
   FastLED.delay(1000 / FRAMES_PER_SECOND);
 }
 
-void AudioFireMode2(int mode) {
-
-  static int frame = 0;
-  static int state[7];
-  static int hold[7];
-  frame++;
-
-  Audio.ReadFreq(FreqVal);
-  fill_solid(leds, NUM_LEDS, 0);
-
-  for (int i = 0; i < 7; i++) {
-    if (FreqVal[i] > (1.5 * FreqVqlAvg[i])) {
-      FreqValLevel[i] = 128;
-      if (hold[i] == 0) {
-        state[i]++;
-        if (state[i] > 16) state[i] = 0;
-      }
-      hold[i] = 1;
-    } else {
-      hold[i] = 0;
-    }
-
-    FreqVqlAvg[i] = ((9) * FreqVqlAvg[i] + FreqVal[i]) / 10;
-    if (FreqVqlAvg[i] < FreqValMinCutOffLevel[i] ) FreqVqlAvg[i] = FreqValMinCutOffLevel[i] ;
-
-    Serial.print(FreqVqlAvg[i]);//Transimit the DC value of the seven bands
-  
-    /*if (i < 6)  Serial.print(",");
-    else Serial.println();*/
-
-    double middleIdx;
-    double pulseLength;
-    double palStart;
-    double palStep;
-    double brightnessDecay;
-
-
-    switch (i) {
-      case 0:
-      case 1:
-      case 2:
-        middleIdx = (NUM_LEDS / 6) * ((2*i) + 1);
-        pulseLength = (NUM_LEDS / 4);
-        palStart = 255 - (32 * i);
-        palStep = 0;
-        brightnessDecay = 0.8;
-        break;      
-
-      case 3:
-
-      case 4:
-
-      case 5:
-
-      case 6:
-        middleIdx = (NUM_LEDS / 16.0) * (state[i]);
-        pulseLength = (FreqVal[i] - FreqVqlAvg[i]) / NUM_LEDS * 2;
-        palStart = (i * 32);
-        palStep = +2.0;
-        brightnessDecay = 0.8;
-        break;
-    }
-
-    fill_palette_float(leds , middleIdx , middleIdx + pulseLength , palStart, palStep, nPal, FreqValLevel[i] , brightnessDecay, BLEND);
-    fill_palette_float(leds , middleIdx , middleIdx - pulseLength , palStart, palStep, nPal, FreqValLevel[i] , brightnessDecay, BLEND);
-
-    FreqValLevel[i] =  FreqValLevel[i] * DECAY_PER_FRAME;
-    if (FreqValLevel[i] < 0) FreqValLevel[i] = 0;
-  }
-
-}
-
-void AudioFire(int mode) {
-  static int frame = 0;
-  frame++;
-
-  Audio.ReadFreq(FreqVal);
-  fill_solid(leds, NUM_LEDS, 0);
-
-  for (int i = 0; i < 7; i++) {
-    if (FreqVal[i] > (1.5 * FreqVqlAvg[i])) {
-      FreqValLevel[i] = 128;
-    }
-
-    FreqVqlAvg[i] = ((9) * FreqVqlAvg[i] + FreqVal[i]) / 10;
-    if (FreqVqlAvg[i] < FreqValMinCutOffLevel[i] ) FreqVqlAvg[i] = FreqValMinCutOffLevel[i] ;
-
-    Serial.print(FreqVqlAvg[i]);//Transimit the DC value of the seven bands
-    /*if (i < 6)  Serial.print(",");
-    else Serial.println();*/
-
-    double middleIdx;
-    double pulseLength;
-    double palStart;
-    double palStep;
-    double brightnessDecay;
-
-
-    switch (i) {
-      case 0:
-      case 1:
-        middleIdx = (NUM_LEDS / 4) * (1 + i * 2);
-        pulseLength = (NUM_LEDS / 4);
-        palStart = 255;
-        palStep = -5.0;
-        brightnessDecay = 0.7;
-        break;
-
-      case 2:
-
-      case 3:
-
-      case 4:
-
-      case 5:
-
-      case 6:
-        middleIdx = (NUM_LEDS / 10.0) * ((2 * i) - 3);
-        pulseLength = NUM_LEDS / 5;
-        palStart = 128;
-        palStep = -10.0;
-        brightnessDecay = 0.4;
-        break;
-    }
-
-    fill_palette_float(leds , middleIdx , middleIdx + pulseLength , palStart, palStep, gPal, FreqValLevel[i] , brightnessDecay, BLEND);
-    fill_palette_float(leds , middleIdx , middleIdx - pulseLength , palStart, palStep, gPal, FreqValLevel[i] , brightnessDecay, BLEND);
-
-    FreqValLevel[i] =  FreqValLevel[i] * DECAY_PER_FRAME;
-    if (FreqValLevel[i] < 0) FreqValLevel[i] = 0;
-
-  }
-
-}
 
 
 
-void fill_palette_float(CRGB* pLeds , int pLedStartIdx , int pLedEndIdx , double pPalStart, double pPalStep, const CRGBPalette16& pGPal, uint8_t pBrightness, double pBrightnessDecay, TBlendType blendType) {
 
-  if (pLedStartIdx < pLedEndIdx) {
-    for (; pLedStartIdx < pLedEndIdx; pLedStartIdx++) {
-      if (pLedStartIdx >= 0 && pLedStartIdx < NUM_LEDS) pLeds[pLedStartIdx] =  pLeds[pLedStartIdx] + ColorFromPalette( pGPal, pPalStart, pBrightness, blendType);
-      pPalStart += pPalStep;
-      pBrightness *= pBrightnessDecay;
-    }
-  } else {
-    for (; pLedStartIdx > pLedEndIdx; pLedStartIdx--) {
-      if (pLedStartIdx >= 0 && pLedStartIdx < NUM_LEDS) pLeds[pLedStartIdx] = pLeds[pLedStartIdx] + ColorFromPalette( pGPal, pPalStart, pBrightness, blendType);
-      pPalStart += pPalStep;
-      pBrightness *= pBrightnessDecay;
-    }
-  }
-
-}

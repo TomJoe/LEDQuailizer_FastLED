@@ -15,4 +15,6 @@ void fill_palette_float(CRGB* pLeds , int pLedStartIdx , int pLedEndIdx , double
     }
   }
 
+
 }
+

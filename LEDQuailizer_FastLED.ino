@@ -24,13 +24,13 @@
 #define BRIGHTNESS  255
 #define FRAMES_PER_SECOND 50
 #define DECAY_PER_FRAME 0.3 //mit dem Wert kannst rumspielen 0.0 - 1.0
-#define INI_CUT_OFF_LEVEL_0 0//50
-#define INI_CUT_OFF_LEVEL_1 0//50
-#define INI_CUT_OFF_LEVEL_2 0//70
-#define INI_CUT_OFF_LEVEL_3 0//90
-#define INI_CUT_OFF_LEVEL_4 0//150
-#define INI_CUT_OFF_LEVEL_5 0//150
-#define INI_CUT_OFF_LEVEL_6 0//100
+#define INI_CUT_OFF_LEVEL_0 60
+#define INI_CUT_OFF_LEVEL_1 70
+#define INI_CUT_OFF_LEVEL_2 70
+#define INI_CUT_OFF_LEVEL_3 90
+#define INI_CUT_OFF_LEVEL_4 150
+#define INI_CUT_OFF_LEVEL_5 150
+#define INI_CUT_OFF_LEVEL_6 100
 //mit dem Wert kannst rumspielen - 1024
 
 CRGB leds[NUM_LEDS];
@@ -49,7 +49,8 @@ Analyzer Audio = Analyzer(4, 3, A5)   ; //Strobe pin ->4  RST pin ->3 Analog Pin
 int FreqVal[7];
 int FreqValLevel[7];
 double FreqVqlAvg[7];
-int FreqValMinCutOffLevel[7];
+int overload;
+int frame = 0;
 
 void setup() {
   //delay(3000); // sanity delay
@@ -67,19 +68,20 @@ void setup() {
 
   FastLED.setBrightness( BRIGHTNESS );
 
-  FreqValMinCutOffLevel[0] = INI_CUT_OFF_LEVEL_0;
-  FreqValMinCutOffLevel[1] = INI_CUT_OFF_LEVEL_1;
-  FreqValMinCutOffLevel[2] = INI_CUT_OFF_LEVEL_2;
-  FreqValMinCutOffLevel[3] = INI_CUT_OFF_LEVEL_3;
-  FreqValMinCutOffLevel[4] = INI_CUT_OFF_LEVEL_4;
-  FreqValMinCutOffLevel[5] = INI_CUT_OFF_LEVEL_5;
-  FreqValMinCutOffLevel[6] = INI_CUT_OFF_LEVEL_6;
+  FreqVqlAvg[0] = INI_CUT_OFF_LEVEL_0;
+  FreqVqlAvg[1] = INI_CUT_OFF_LEVEL_1;
+  FreqVqlAvg[2] = INI_CUT_OFF_LEVEL_2;
+  FreqVqlAvg[3] = INI_CUT_OFF_LEVEL_3;
+  FreqVqlAvg[4] = INI_CUT_OFF_LEVEL_4;
+  FreqVqlAvg[5] = INI_CUT_OFF_LEVEL_5;
+  FreqVqlAvg[6] = INI_CUT_OFF_LEVEL_6;
 
   for (int i = 0; i < 7; i++) {
 
-    FreqVqlAvg[i] = FreqValMinCutOffLevel[i];
+    FreqVqlAvg[i] = FreqVqlAvg[i];
 
   }
+
   gPal = HeatColors_p;
   nPal = PartyColors_p;
   Audio.Init();
@@ -88,14 +90,37 @@ void setup() {
 void loop()
 {
   // Add entropy to random number generator; we use a lot of it.
+  frame++;
   random16_add_entropy( random());
 
   //AudioFire(1);
   AudioFireMode2(2);
 
+  if (overload > 0) {
+    fill_solid(leds, NUM_LEDS, CRGB::Red);
+    overload--;
+    if (overload == 1)
+      Serial.println("overload!");
+  }
+
+  if (frame % FRAMES_PER_SECOND == 0) {
+
+    Serial.println("Average: ");
+    for (int i = 0; i < 7; i++) {
+
+      Serial.print((int)FreqVqlAvg[i]);
+      if (i < 6)  Serial.print(",");
+      else Serial.println();
+
+    }
+    
+    Serial.println();
+  }
+
   FastLED.show(); // display this frame
   FastLED.delay(1000 / FRAMES_PER_SECOND);
 }
+
 
 
 

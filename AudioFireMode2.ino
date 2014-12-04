@@ -1,6 +1,6 @@
 void AudioFireMode2(int mode) {
 
-  static int frame = 0;
+  
   static int state[7];
   static int hold[7];
   frame++;
@@ -21,12 +21,7 @@ void AudioFireMode2(int mode) {
     }
 
     FreqVqlAvg[i] = (249.0 * FreqVqlAvg[i] + FreqVal[i]) / 250.0;
-    if (FreqVqlAvg[i] < FreqValMinCutOffLevel[i] ) FreqVqlAvg[i] = FreqValMinCutOffLevel[i] ;
-
-    Serial.print((int)FreqVqlAvg[i]);//Transimit the DC value of the seven bands
-  
-    if (i < 6)  Serial.print(",");
-    else Serial.println();
+    //if (FreqVqlAvg[i] < FreqValMinCutOffLevel[i] ) FreqVqlAvg[i] = FreqValMinCutOffLevel[i] ;
 
     double middleIdx;
     double pulseLength;
@@ -40,7 +35,7 @@ void AudioFireMode2(int mode) {
       case 1:
       case 2:
         middleIdx = (NUM_LEDS / 6) * ((2*i) + 1);
-        pulseLength = (double)FreqVal[i] / (double)FreqVqlAvg[i] * 5;
+        pulseLength = (double)FreqVal[i] / (double)FreqVqlAvg[i] * 8;
         palStart = 255 - (32 * i);
         palStep = 0;
         brightnessDecay = 0.8;
@@ -51,7 +46,7 @@ void AudioFireMode2(int mode) {
       case 5:
       case 6:
         middleIdx = (NUM_LEDS / 16.0) * (state[i]);
-        pulseLength = (double)FreqVal[i] / (double)FreqVqlAvg[i] * 2;
+        pulseLength = (double)FreqVal[i] / (double)FreqVqlAvg[i] * 3;
         palStart = (i * 32);
         palStep = +2.0;
         brightnessDecay = 0.8;
@@ -60,6 +55,8 @@ void AudioFireMode2(int mode) {
 
     fill_palette_float(leds , middleIdx , middleIdx + pulseLength , palStart, palStep, nPal, FreqValLevel[i] , brightnessDecay, BLEND);
     fill_palette_float(leds , middleIdx , middleIdx - pulseLength , palStart, palStep, nPal, FreqValLevel[i] , brightnessDecay, BLEND);
+
+    if(FreqVal[i] > 1000) overload = 5;
 
     FreqValLevel[i] =  FreqValLevel[i] * DECAY_PER_FRAME;
     if (FreqValLevel[i] < 0) FreqValLevel[i] = 0;

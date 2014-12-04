@@ -1,6 +1,6 @@
 
 void AudioFire(int mode) {
-  static int frame = 0;
+  
   frame++;
 
   Audio.ReadFreq(FreqVal);
@@ -12,7 +12,7 @@ void AudioFire(int mode) {
     }
 
     FreqVqlAvg[i] = ((9) * FreqVqlAvg[i] + FreqVal[i]) / 10;
-    if (FreqVqlAvg[i] < FreqValMinCutOffLevel[i] ) FreqVqlAvg[i] = FreqValMinCutOffLevel[i] ;
+    //if (FreqVqlAvg[i] < FreqValMinCutOffLevel[i] ) FreqVqlAvg[i] = FreqValMinCutOffLevel[i] ;
 
     Serial.print(FreqVqlAvg[i]);//Transimit the DC value of the seven bands
     /*if (i < 6)  Serial.print(",");

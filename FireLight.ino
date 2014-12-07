@@ -21,9 +21,9 @@ static byte heat[NUM_SEGMENTS][FIRE_LEDS_MAX];
 void Fire(int mode)
 {
   
-  FireVert(  0, 30, UP,   0);
-  FireHorz( 31, 64, LEFT, 1);
-  FireVert( 65, 80, DOWN, 2);
+  FireVert(  0, 50, UP,   0);
+  FireHorz( 51, 128, LEFT, 1);
+  FireVert( 139, 159, DOWN, 2);
 
 }
 

@@ -21,7 +21,7 @@
 
 #endif
 
-#define BRIGHTNESS  255
+#define BRIGHTNESS  128
 #define FRAMES_PER_SECOND 50
 #define DECAY_PER_FRAME 0.3 //mit dem Wert kannst rumspielen 0.0 - 1.0
 #define INI_CUT_OFF_LEVEL_0 60
@@ -94,7 +94,8 @@ void loop()
   random16_add_entropy( random());
 
   //AudioFire(1);
-  AudioFireMode2(2);
+  //AudioFireMode2(2);
+  Fire(0);
 
   if (overload > 0) {
     fill_solid(leds, NUM_LEDS, CRGB::Red);

@@ -17,12 +17,12 @@
 #define SPI_SPEED   DATA_RATE_MHZ(1)
 #define COLOR_ORDER BGR //Anpassen
 #define CHIPSET     WS2801 //CHIPSET anpassen
-#define NUM_LEDS    160 //Anpassen
+#define NUM_LEDS    80 //Anpassen
 
 #endif
 
 #define BRIGHTNESS  128
-#define FRAMES_PER_SECOND 25
+#define FRAMES_PER_SECOND 50
 #define DECAY_PER_FRAME 0.3 //mit dem Wert kannst rumspielen 0.0 - 1.0
 #define INI_CUT_OFF_LEVEL_0 60
 #define INI_CUT_OFF_LEVEL_1 70

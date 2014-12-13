@@ -21,8 +21,8 @@
 
 #endif
 
-#define BRIGHTNESS  128
-#define FRAMES_PER_SECOND 25
+#define BRIGHTNESS  255
+#define FRAMES_PER_SECOND 50
 #define DECAY_PER_FRAME 0.3 //mit dem Wert kannst rumspielen 0.0 - 1.0
 #define INI_CUT_OFF_LEVEL_0 60
 #define INI_CUT_OFF_LEVEL_1 70

@@ -8,7 +8,7 @@
 // COOLING: How much does the air cool as it rises?
 // Less cooling = taller flames.  More cooling = shorter flames.
 // Default 50, suggested range 20-100 
-#define COOLING  100
+#define COOLING  50
 
 // SPARKING: What chance (out of 255) is there that a new spark will be lit?
 // Higher chance = more roaring fire.  Lower chance = more flickery fire.
@@ -20,67 +20,74 @@ static byte heat[NUM_SEGMENTS][FIRE_LEDS_MAX];
 
 void Fire(int mode)
 {
-  
-  FireVert(  0, 50, UP,   0);
-  FireHorz( 51, 128, LEFT, 1);
-  FireVert( 139, 159, DOWN, 2);
+
+  FireVert(  0, 30, UP,   0);
+  FireHorz( 45, 135, LEFT, 1);
+  FireVert( 145, 159, DOWN, 2);
 
 }
 
 void FireVert(int startIdx, int endIdx, int orientation, int segmentNbr)
 {
-// Array of temperature readings at each simulation cell
-   int fire_leds = abs(endIdx - startIdx);
+  // Array of temperature readings at each simulation cell
+  int fire_leds = abs(endIdx - startIdx);
 
   // Step 1.  Cool down every cell a little
-    for( int i = 0; i < fire_leds; i++) {
-      heat[segmentNbr][i] = qsub8( heat[segmentNbr][i],  random8(0, ((COOLING * 10) / fire_leds) + 2));
-    }
-  
-    // Step 2.  Heat from each cell drifts 'up' and diffuses a little
-    for( int k= fire_leds - 1; k >= 2; k--) {
-      heat[segmentNbr][k] = (heat[segmentNbr][k - 1] + heat[segmentNbr][k - 2] + heat[segmentNbr][k - 2] ) / 3;
-    }
-    
-    // Step 3.  Randomly ignite new 'sparks' of heat near the bottom
-    if( random8() < SPARKING ) {
-      int y = random8(7);
-      heat[segmentNbr][y] = qadd8( heat[segmentNbr][y], random8(160,255) );
-    }
+  for( int i = 0; i < fire_leds; i++) {
+    heat[segmentNbr][i] = qsub8( heat[segmentNbr][i],  random8(0, ((COOLING * 10) / fire_leds) + 2));
+  }
 
-    // Step 4.  Map from heat cells to LED colors
-    for( int j = 0; j < fire_leds; j++) {
-        if((orientation == UP) && ((startIdx + j) <= endIdx)) leds[startIdx+j] = HeatColor( heat[segmentNbr][j]);
-        if((orientation == DOWN) && ((endIdx - j) >= startIdx)) leds[endIdx-j] = HeatColor( heat[segmentNbr][j]);
-    }
+  // Step 2.  Heat from each cell drifts 'up' and diffuses a little
+  for( int k= fire_leds - 1; k >= 2; k--) {
+    heat[segmentNbr][k] = (heat[segmentNbr][k - 1] + heat[segmentNbr][k - 2] + heat[segmentNbr][k - 2] ) / 3;
+  }
+
+  // Step 3.  Randomly ignite new 'sparks' of heat near the bottom
+  if( random8() < SPARKING ) {
+    int y = random8(7);
+    heat[segmentNbr][y] = qadd8( heat[segmentNbr][y], random8(80,255) );
+  }
+
+  // Step 4.  Map from heat cells to LED colors
+  for( int j = 0; j < fire_leds; j++) {
+    if((orientation == UP) && ((startIdx + j) <= endIdx)) leds[startIdx+j] = ColorFromPalette( gPal, heat[segmentNbr][j],heat[segmentNbr][j],BLEND);
+    if((orientation == DOWN) && ((endIdx - j) >= startIdx)) leds[endIdx-j] = ColorFromPalette( gPal, heat[segmentNbr][j],heat[segmentNbr][j],BLEND);
+  }
 }
 
 void FireHorz(int startIdx, int endIdx, int orientation, int segmentNbr)
 {
-// Array of temperature readings at each simulation cell
-   int fire_leds = abs(endIdx - startIdx);
-  
-  // Step 1.  Cool down every cell a little
-    for( int i = 0; i < fire_leds; i++) {
-      heat[segmentNbr][i] = qsub8( heat[segmentNbr][i],  random8(0, ((COOLING * 10) / fire_leds) + 2));
-    }
-  
-    // Step 2.  Heat from each cell drifts 'up' and diffuses a little
-    for( int k= 1 ; k < (fire_leds-1); k++) {
-      int old_left_heat = heat[segmentNbr][k-1];
-      heat[segmentNbr][k] = (old_left_heat + heat[segmentNbr][k] + heat[segmentNbr][k +1])/3 ;
-    }
-    
-    // Step 3.  Randomly ignite new 'sparks' of heat near the bottom
-    if( random8() < SPARKING ) {
-      int y = random8(fire_leds);
-      heat[segmentNbr][y] = qadd8( heat[segmentNbr][y], random8( 160, 255) );
-    }
+  // Array of temperature readings at each simulation cell
+  int fire_leds = abs(endIdx - startIdx);
 
-    // Step 4.  Map from heat cells to LED colors
-    for( int j = 0; j < fire_leds; j++) {
-        if((orientation == LEFT) && ((startIdx + j) <= endIdx)) leds[startIdx+j] = HeatColor( heat[segmentNbr][j]);
-        if((orientation == RIGHT) && ((endIdx - j) >= startIdx)) leds[endIdx-j] = HeatColor( heat[segmentNbr][j]);
+  // Step 1.  Cool down every cell a little
+  for( int i = 0; i < fire_leds; i++) {
+    heat[segmentNbr][i] = qsub8( heat[segmentNbr][i],  random8(0, ((COOLING * 10) / fire_leds) + 2));
+  }
+
+  // Step 2.  Heat from each cell drifts 'up' and diffuses a little
+  for( int k= 2 ; k < (fire_leds-2); k++) {
+    int old_left_heat = heat[segmentNbr][k-1];
+    int old_very_left_heat = heat[segmentNbr][k-2];
+    heat[segmentNbr][k] = (old_very_left_heat + old_left_heat + heat[segmentNbr][k] + heat[segmentNbr][k +1] + heat[segmentNbr][k + 2])/5;
+  }
+
+  // Step 3.  Randomly ignite new 'sparks' of heat near the bottom
+  for(int y = 2; y < (fire_leds-2); y += 3){
+    if( random8() < SPARKING / 10) {
+      heat[segmentNbr][y] = qadd8( heat[segmentNbr][y], random8( 80, 120) );
+      heat[segmentNbr][y-1] = heat[segmentNbr][y];
+      heat[segmentNbr][y+1] = heat[segmentNbr][y];
     }
+  }
+
+  // Step 4.  Map from heat cells to LED colors
+  for( int j = 0; j < fire_leds; j++) {
+    if((orientation == LEFT) && ((startIdx + j) <= endIdx))  {
+      leds[startIdx+j] = ColorFromPalette( gPal, heat[segmentNbr][j],heat[segmentNbr][j],BLEND);
+    }
+    //if((orientation == RIGHT) && ((endIdx - j) >= startIdx)) leds[endIdx-j] = HeatColor( heat[segmentNbr][j]);
+  }
 }
+
 

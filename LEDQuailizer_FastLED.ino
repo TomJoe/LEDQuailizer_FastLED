@@ -1,5 +1,6 @@
 #include <FastLED.h>
 #include <AudioAnalyzer.h>
+#include "utils.h"
 
 //#define RENE //so lassen, dann sollte es klappen
 
@@ -35,6 +36,10 @@
 
 CRGB leds[NUM_LEDS];
 CRGBPalette16 gPal, nPal;
+
+configuration *mainConfig;
+#define PAR_DEBUG_LEVEL p02.pInt
+#define PAR_NUMEROF_CONFIGS p01.pInt
 
 #ifdef RENE
 
@@ -85,6 +90,8 @@ void setup() {
   gPal = HeatColors_p;
   nPal = PartyColors_p;
   Audio.Init();
+  
+  initConfig();
 }
 
 void loop()
@@ -94,8 +101,8 @@ void loop()
   random16_add_entropy( random());
 
   //AudioFire(1);
-  //AudioFireMode2(2);
-  Fire(0);
+  AudioFireMode2(2);
+  //Fire(0);
 
   if (overload > 0) {
     fill_solid(leds, NUM_LEDS, CRGB::Red);
@@ -119,6 +126,7 @@ void loop()
   }
 
   FastLED.show(); // display this frame
+  readSerial();
   FastLED.delay(1000 / FRAMES_PER_SECOND);
 }
 

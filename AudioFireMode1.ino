@@ -1,5 +1,12 @@
+#define FREQ_AVG_2_TRIGGER_RATION 1.5
+#define FILTER_LENGTH 10.0
 
-void AudioFire(int mode) {
+void initAudioFireMode1(configuration *thisConfig) {
+  thisConfig->p01.pDouble = FREQ_AVG_2_TRIGGER_RATION;
+  thisConfig->p02.pDouble = FILTER_LENGTH;
+}
+
+void AudioFireMode1(int mode) {
   
   frame++;
 

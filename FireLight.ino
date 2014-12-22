@@ -8,15 +8,26 @@
 // COOLING: How much does the air cool as it rises?
 // Less cooling = taller flames.  More cooling = shorter flames.
 // Default 50, suggested range 20-100 
-#define COOLING  50
+#define DEF_COOLING  50
+#define PAR_COOLING thisConfiguration->p01.pInt
 
 // SPARKING: What chance (out of 255) is there that a new spark will be lit?
 // Higher chance = more roaring fire.  Lower chance = more flickery fire.
 // Default 120, suggested range 50-200.
-#define SPARKING 80
-
+#define DEF_SPARKING 80
+#define PAR_SPARKING thisConfiguration->p02.pInt
 
 static byte heat[NUM_SEGMENTS][FIRE_LEDS_MAX];
+
+configuration *thisConfiguration;
+
+void initFireLight(configuration* thisConfig){
+  
+  thisConfiguration = thisConfig;
+  PAR_COOLING = DEF_COOLING;
+  PAR_SPARKING = DEF_SPARKING;
+  
+}
 
 void Fire(int mode)
 {
@@ -34,7 +45,7 @@ void FireVert(int startIdx, int endIdx, int orientation, int segmentNbr)
 
   // Step 1.  Cool down every cell a little
   for( int i = 0; i < fire_leds; i++) {
-    heat[segmentNbr][i] = qsub8( heat[segmentNbr][i],  random8(0, ((COOLING * 10) / fire_leds) + 2));
+    heat[segmentNbr][i] = qsub8( heat[segmentNbr][i],  random8(0, ((PAR_COOLING * 10) / fire_leds) + 2));
   }
 
   // Step 2.  Heat from each cell drifts 'up' and diffuses a little
@@ -43,7 +54,7 @@ void FireVert(int startIdx, int endIdx, int orientation, int segmentNbr)
   }
 
   // Step 3.  Randomly ignite new 'sparks' of heat near the bottom
-  if( random8() < SPARKING ) {
+  if( random8() < PAR_SPARKING ) {
     int y = random8(7);
     heat[segmentNbr][y] = qadd8( heat[segmentNbr][y], random8(80,255) );
   }
@@ -62,7 +73,7 @@ void FireHorz(int startIdx, int endIdx, int orientation, int segmentNbr)
 
   // Step 1.  Cool down every cell a little
   for( int i = 0; i < fire_leds; i++) {
-    heat[segmentNbr][i] = qsub8( heat[segmentNbr][i],  random8(0, ((COOLING * 10) / fire_leds) + 2));
+    heat[segmentNbr][i] = qsub8( heat[segmentNbr][i],  random8(0, ((PAR_COOLING * 10) / fire_leds) + 2));
   }
 
   // Step 2.  Heat from each cell drifts 'up' and diffuses a little
@@ -74,7 +85,7 @@ void FireHorz(int startIdx, int endIdx, int orientation, int segmentNbr)
 
   // Step 3.  Randomly ignite new 'sparks' of heat near the bottom
   for(int y = 2; y < (fire_leds-2); y += 3){
-    if( random8() < SPARKING / 10) {
+    if( random8() < PAR_SPARKING / 10) {
       heat[segmentNbr][y] = qadd8( heat[segmentNbr][y], random8( 80, 120) );
       heat[segmentNbr][y-1] = heat[segmentNbr][y];
       heat[segmentNbr][y+1] = heat[segmentNbr][y];

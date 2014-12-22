@@ -1,9 +1,14 @@
 #define FREQ_AVG_2_TRIGGER_RATION 1.2
 #define FILTER_LENGTH 250.0
 
+
+void initAudioFireMode2(configuration *thisConfig) {
+  thisConfig->p01.pDouble = FREQ_AVG_2_TRIGGER_RATION;
+  thisConfig->p02.pDouble = FILTER_LENGTH;
+}
+
 void AudioFireMode2(int mode) {
 
-  
   static int state[7];
   static int hold[7];
   frame++;
@@ -38,11 +43,11 @@ void AudioFireMode2(int mode) {
       case 1:
       case 2:
         middleIdx = (NUM_LEDS / 2) * (i);
-        pulseLength = (NUM_LEDS/8) * (double)FreqVal[i] / (double)FreqVqlAvg[i];
+        pulseLength = (NUM_LEDS / 8) * (double)FreqVal[i] / (double)FreqVqlAvg[i];
         palStart = 255 - (64 * i);
         palStep = 0;
         brightnessDecay = 0.9;
-        break;      
+        break;
 
       case 3:
       case 4:
@@ -59,10 +64,11 @@ void AudioFireMode2(int mode) {
     fill_palette_float(leds , middleIdx , middleIdx + pulseLength , palStart, palStep, nPal, FreqValLevel[i] , brightnessDecay, BLEND);
     fill_palette_float(leds , middleIdx , middleIdx - pulseLength , palStart, palStep, nPal, FreqValLevel[i] , brightnessDecay, BLEND);
 
-    if(FreqVal[i] > 1000) overload = 5;
+    if (FreqVal[i] > 1000) overload = 5;
 
     FreqValLevel[i] =  FreqValLevel[i] * DECAY_PER_FRAME;
     if (FreqValLevel[i] < 0) FreqValLevel[i] = 0;
   }
 
 }
+

@@ -27,4 +27,3 @@ typedef struct configuration {
   int magicByteEnd;
 };
 
-configuration *mainConfig;

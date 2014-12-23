@@ -13,12 +13,12 @@
 
 #else
 
-#define LED_PIN     5 //Anpassen
-#define CLK_PIN     6 //brauchst du nicht
+#define LED_PIN     8 //Anpassen
+#define CLK_PIN     7 //brauchst du nicht
 #define SPI_SPEED   DATA_RATE_MHZ(1)
 #define COLOR_ORDER BGR //Anpassen
 #define CHIPSET     WS2801 //CHIPSET anpassen
-#define NUM_LEDS    160 //Anpassen
+#define NUM_LEDS    10 //Anpassen
 
 #endif
 
@@ -38,8 +38,8 @@ CRGB leds[NUM_LEDS];
 CRGBPalette16 gPal, nPal;
 
 configuration *mainConfig;
-#define PAR_DEBUG_LEVEL p02.pInt
-#define PAR_NUMEROF_CONFIGS p01.pInt
+#define PAR_NUMEROF_CONFIGS   p01.pInt
+#define PAR_DEBUG_LEVEL       p02.pInt
 
 #ifdef RENE
 
@@ -101,8 +101,8 @@ void loop()
   random16_add_entropy( random());
 
   //AudioFire(1);
-  AudioFireMode2(2);
-  //Fire(0);
+  //AudioFireMode2(2);
+  Fire(0);
 
   if (overload > 0) {
     fill_solid(leds, NUM_LEDS, CRGB::Red);

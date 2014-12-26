@@ -9,13 +9,13 @@
 // Less cooling = taller flames.  More cooling = shorter flames.
 // Default 50, suggested range 20-100 
 #define DEF_COOLING  50
-#define PAR_COOLING thisConfiguration->p01.pInt
+#define PAR_COOLING thisConfiguration->p[0].pInt
 
 // SPARKING: What chance (out of 255) is there that a new spark will be lit?
 // Higher chance = more roaring fire.  Lower chance = more flickery fire.
 // Default 120, suggested range 50-200.
 #define DEF_SPARKING 80
-#define PAR_SPARKING thisConfiguration->p02.pInt
+#define PAR_SPARKING thisConfiguration->p[1].pInt
 
 static byte heat[NUM_SEGMENTS][FIRE_LEDS_MAX];
 

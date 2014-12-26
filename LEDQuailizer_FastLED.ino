@@ -15,16 +15,14 @@
 
 #define LED_PIN     8 //Anpassen
 #define CLK_PIN     7 //brauchst du nicht
-#define SPI_SPEED   DATA_RATE_MHZ(1)
 #define COLOR_ORDER BGR //Anpassen
 #define CHIPSET     WS2801 //CHIPSET anpassen
-#define NUM_LEDS    10 //Anpassen
+#define NUM_LEDS    50 //Anpassen
 
 #endif
 
-#define BRIGHTNESS  255
-#define FRAMES_PER_SECOND 50
-#define DECAY_PER_FRAME 0.3 //mit dem Wert kannst rumspielen 0.0 - 1.0
+#define INI_BRIGHTNESS  255
+#define INI_FRAMES_PER_SECOND 50
 #define INI_CUT_OFF_LEVEL_0 60
 #define INI_CUT_OFF_LEVEL_1 70
 #define INI_CUT_OFF_LEVEL_2 70
@@ -37,9 +35,9 @@
 CRGB leds[NUM_LEDS];
 CRGBPalette16 gPal, nPal;
 
-configuration *mainConfig;
-#define PAR_NUMEROF_CONFIGS   p01.pInt
-#define PAR_DEBUG_LEVEL       p02.pInt
+#define PAR_NUMEROF_CONFIGS   p[0].pInt
+#define PAR_DEBUG_LEVEL       p[1].pInt
+#define PAR_FRAMES_PER_SECOND p[2].pInt
 
 #ifdef RENE
 
@@ -47,7 +45,7 @@ Analyzer Audio = Analyzer(6, 7, 0); //Strobe pin ->6  RST pin ->7 Analog Pin ->0
 
 #else
 
-Analyzer Audio = Analyzer(4, 3, A5)   ; //Strobe pin ->4  RST pin ->3 Analog Pin ->5 //Anpassen
+Analyzer Audio = Analyzer(6, 5, A0)   ; //Strobe pin ->4  RST pin ->3 Analog Pin ->5 //Anpassen
 
 #endif
 
@@ -56,6 +54,9 @@ int FreqValLevel[7];
 double FreqVqlAvg[7];
 int overload;
 int frame = 0;
+
+configuration *modeConfig;
+configuration *mainConfig;
 
 void setup() {
   //delay(3000); // sanity delay
@@ -67,11 +68,11 @@ void setup() {
 
 #else
 
-  FastLED.addLeds<CHIPSET, LED_PIN, CLK_PIN, COLOR_ORDER, SPI_SPEED>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );
+  FastLED.addLeds<CHIPSET, LED_PIN, CLK_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );
 
 #endif
 
-  FastLED.setBrightness( BRIGHTNESS );
+  FastLED.setBrightness( INI_BRIGHTNESS );
 
   FreqVqlAvg[0] = INI_CUT_OFF_LEVEL_0;
   FreqVqlAvg[1] = INI_CUT_OFF_LEVEL_1;
@@ -101,8 +102,9 @@ void loop()
   random16_add_entropy( random());
 
   //AudioFire(1);
-  //AudioFireMode2(2);
-  Fire(0);
+  AudioFireMode2(modeConfig);
+  //Fire(0);
+ //if (FreqVal[i] > 1000) overload = 5;
 
   if (overload > 0) {
     fill_solid(leds, NUM_LEDS, CRGB::Red);
@@ -111,7 +113,7 @@ void loop()
       Serial.println("overload!");
   }
 
-  if (frame % FRAMES_PER_SECOND == 0) {
+  if ((frame % (5 * INI_FRAMES_PER_SECOND) == 0) && (mainConfig->PAR_DEBUG_LEVEL == 0) ) {
 
     Serial.println("Average: ");
     for (int i = 0; i < 7; i++) {
@@ -127,7 +129,7 @@ void loop()
 
   FastLED.show(); // display this frame
   readSerial();
-  FastLED.delay(1000 / FRAMES_PER_SECOND);
+  FastLED.delay(1000 / INI_FRAMES_PER_SECOND);
 }
 
 

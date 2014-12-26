@@ -1,9 +1,10 @@
 #define FREQ_AVG_2_TRIGGER_RATION 1.5
 #define FILTER_LENGTH 10.0
+#define INI_DECAY_PER_FRAME 0.3 //mit dem Wert kannst rumspielen 0.0 - 1.0
 
 void initAudioFireMode1(configuration *thisConfig) {
-  thisConfig->p01.pDouble = FREQ_AVG_2_TRIGGER_RATION;
-  thisConfig->p02.pDouble = FILTER_LENGTH;
+  thisConfig->p[0].pDouble = FREQ_AVG_2_TRIGGER_RATION;
+  thisConfig->p[1].pDouble = FILTER_LENGTH;
 }
 
 void AudioFireMode1(int mode) {
@@ -62,7 +63,7 @@ void AudioFireMode1(int mode) {
     fill_palette_float(leds , middleIdx , middleIdx + pulseLength , palStart, palStep, gPal, FreqValLevel[i] , brightnessDecay, BLEND);
     fill_palette_float(leds , middleIdx , middleIdx - pulseLength , palStart, palStep, gPal, FreqValLevel[i] , brightnessDecay, BLEND);
 
-    FreqValLevel[i] =  FreqValLevel[i] * DECAY_PER_FRAME;
+    FreqValLevel[i] =  FreqValLevel[i] * INI_DECAY_PER_FRAME;
     if (FreqValLevel[i] < 0) FreqValLevel[i] = 0;
 
   }

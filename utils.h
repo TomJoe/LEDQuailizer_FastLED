@@ -1,5 +1,5 @@
-#define MAGIC_BYTE_START 0xabcd
-#define MAGIC_BYTE_END 0xdcba
+#define MAGIC_BYTE_START 0xafcf
+#define MAGIC_BYTE_END 0xfafc
 
 #define RETURN_FAILED -1
 
@@ -23,7 +23,7 @@ union parameter {
 typedef struct configuration {
   int magicByteStart;
   int mode;
-  parameter p01, p02, p03, p04, p05, p06, p07, p08, p09;
+  parameter p[10];
   int magicByteEnd;
 };
 

@@ -1,9 +1,7 @@
 #include "EEPROM.h"
 
-#define PAR_DEBUG_LEVEL p02.pInt
-#define PAR_NUMEROF_CONFIGS p01.pInt
-
-configuration *modeConfig;
+#define PAR_DEBUG_LEVEL p[1].pInt
+#define PAR_NUMEROF_CONFIGS p[0].pInt
 
 //fill a strip "pLeds" from "pLedStartIdx" to "pLedEndIdx" uding a 256color-Palette "gPal"
 // starting with color at palette index "pPalStart" and modulating color for each next Pixel with "pPalStep"
@@ -26,21 +24,24 @@ void fill_palette_float(CRGB* pLeds , int pLedStartIdx , int pLedEndIdx , double
   }
 }
 
-int saveConfig(int configNumber) {
+int saveConfig() {
   int rtn = RETURN_FAILED;
 
-  if (configNumber == 0) {
-    //save all configs
-    for (int i = 0; i < ((mainConfig->PAR_NUMEROF_CONFIGS + 1) * sizeof(configuration)) ; i++) {
-      char a = *((byte*)mainConfig + i);
-      EEPROM.write(i, a);
-    }
-    Serial.println("Config saved");
-    rtn = 0;
-  } else {
-    //save one config
-    rtn = configNumber;
-  };
+  //save main config
+  for (int i = 0; i < sizeof(configuration) ; i++) {
+    char a = *((byte*)mainConfig + i);
+    EEPROM.write(i, a);
+  }
+
+  //save current modeConfig
+  for (int i = 0; i < sizeof(configuration) ; i++) {
+    char a = *((byte*)modeConfig + i);
+    EEPROM.write(i + mainConfig->mode * sizeof(configuration), a);
+  }
+
+  Serial.println("Config saved");
+
+  rtn = 0;
 
   return rtn;
 }
@@ -52,12 +53,15 @@ int saveConfig(int configNumber) {
 int readConfig(int configNumber) {
   int rtn = RETURN_FAILED;
 
+  if (modeConfig == NULL) modeConfig = (configuration*) malloc(sizeof(configuration));
+
   if (configNumber <= MAX_CONFIG_NBR) {
 
-    for (int i = mainConfig->PAR_NUMEROF_CONFIGS * sizeof(configuration); i < ((mainConfig->PAR_NUMEROF_CONFIGS + 1) * sizeof(configuration)); i++) {
-      char a = EEPROM.read(i);
-      *((byte*)&modeConfig + i) = a;
+    for (int i = 0; i < sizeof(configuration); i++) {
+      char a = EEPROM.read(i + configNumber * sizeof(configuration));
+      *((byte*)modeConfig + i) = a;
     }
+
     rtn = configNumber;
     Serial.print("Nbr of config loaded:"); Serial.println(configNumber);
   }
@@ -65,18 +69,26 @@ int readConfig(int configNumber) {
   return rtn;
 }
 
-int addConfig() {
-  int rtn = RETURN_FAILED;
+configuration* addConfig() {
+  configuration *rtn = NULL;
+
+  if (modeConfig == NULL) modeConfig = (configuration*) malloc(sizeof(configuration));
 
   if (mainConfig->PAR_NUMEROF_CONFIGS < MAX_CONFIG_NBR) {
-
-    rtn = ++mainConfig->PAR_NUMEROF_CONFIGS;
-    mainConfig->mode = mainConfig->PAR_NUMEROF_CONFIGS;
+    mainConfig->mode = ++mainConfig->PAR_NUMEROF_CONFIGS;
 
     modeConfig->magicByteStart = MAGIC_BYTE_START;
     modeConfig->magicByteEnd = MAGIC_BYTE_END;
 
+    modeConfig->mode = MODE_AUDIO_FIRE_MODE_2;
+
+    initModeConfig(modeConfig);
+
     Serial.print("Config added: "); Serial.println(mainConfig->mode);
+
+
+    rtn = modeConfig;
+
   }
 
   return rtn;
@@ -88,10 +100,19 @@ int addConfig() {
 
 void initConfig() {
   //read Main Config
-  for (int i = 0; i < sizeof(mainConfig); i++) {
+  Serial.print("*mainConfig : "); Serial.println((int) mainConfig, HEX);
+  if (mainConfig == NULL) mainConfig = (configuration*) malloc(sizeof(configuration));
+  Serial.print("*mainConfig : "); Serial.println((int) mainConfig, HEX);
+  Serial.print("sizeof(configuration) : "); Serial.println(sizeof(configuration));
+  Serial.print("sizeof(*mainConfig) : "); Serial.println(sizeof(*mainConfig) );
+
+  // read MainConfig
+
+  for (int i = 0; i < sizeof(configuration); i++) {
     char a = EEPROM.read(i);
-    *((byte*)&mainConfig + i) = a;
+    *((byte*)mainConfig + i) = a;
   }
+
   if (mainConfig->magicByteStart == MAGIC_BYTE_START && mainConfig->magicByteEnd == MAGIC_BYTE_END) {
     Serial.println("Config loaded");
     Serial.print("number of Configs: "); Serial.println(mainConfig->PAR_NUMEROF_CONFIGS);
@@ -101,17 +122,17 @@ void initConfig() {
   } else {
     Serial.println("No valid config found. Creating new Config.");
     Serial.println("type 'save' to save config");
+
     mainConfig->magicByteStart = MAGIC_BYTE_START;
     mainConfig->magicByteEnd = MAGIC_BYTE_END;
 
     mainConfig->mode = 0; //configuration to use on launch
     mainConfig->PAR_NUMEROF_CONFIGS = 0; //Number of Configs
 
-    Serial.println("MainConfig");
-    Serial.print("configNbr:    "); Serial.println(mainConfig->mode);
-    Serial.print("# of Configs: "); Serial.println(mainConfig->PAR_NUMEROF_CONFIGS);
-    Serial.print("sizeOfConfig: "); Serial.println(sizeof(configuration));
+    addConfig();
   }
+
+  printConfig();
 }
 
 //
@@ -135,15 +156,34 @@ void readSerial() {
     Serial.print("Input: ");
     Serial.println(str);
 
-    if (str[0] == char('p')) {
-      Serial.println(atoi(str + 1));
+    if (strncmp(str, "pi", 2) == 0) {
+      printConfig();
+      int paraNbr = atoi(str + 2); Serial.println(paraNbr);
+      int paraValue = atoi(strrchr(str, ':') + 1); Serial.println(paraValue);
+      modeConfig->p[paraNbr].pInt = paraValue;
+      printConfig();
     }
 
-    if (strcmp(str, "save") == 0) saveConfig(0);
+    if (strncmp(str, "pd", 2) == 0) {
+      printConfig();
+      int paraNbr = atoi(str + 2); Serial.println(paraNbr);
+      double paraValue = atof(strrchr(str, ':') + 1); Serial.println(paraValue);
+      modeConfig->p[paraNbr].pDouble = paraValue;
+      printConfig();
+    }
+
+    if (strcmp(str, "save") == 0) saveConfig();
+
+    if (strcmp(str, "print") == 0) printConfig();
 
     if (strcmp(str, "add") == 0) addConfig();
 
-    if (strcmp(str, "init") == 0) initModeConfig();
+    if (strcmp(str, "init") == 0) initModeConfig(modeConfig);
+
+    if (strncmp(str, "debug", 5) == 0) {
+      Serial.println(atoi(str + 5));
+      mainConfig->PAR_DEBUG_LEVEL = atoi(str + 5);
+    }
 
     Serial.println(">");
   }
@@ -153,20 +193,49 @@ void readSerial() {
 //init cofiguration
 //
 
-void initModeConfig() {
-  switch(mainConfig->mode) {
-  case MODE_AUDIO_FIRE_MODE_1:
-    initAudioFireMode1(modeConfig);
-    break;
-  case MODE_AUDIO_FIRE_MODE_2:
-    initAudioFireMode2(modeConfig);
-    break;
-  case MODE_FIRE_LIGHT:
-    initFireLight(modeConfig);
-    break;
-  default:
-    mainConfig->mode = MODE_AUDIO_FIRE_MODE_2;
-    initModeConfig();
-    break;
+void initModeConfig(configuration * thisConfig) {
+  switch (thisConfig->mode) {
+    case MODE_AUDIO_FIRE_MODE_1:
+      initAudioFireMode1(thisConfig);
+      break;
+    case MODE_AUDIO_FIRE_MODE_2:
+      initAudioFireMode2(thisConfig);
+      break;
+    case MODE_FIRE_LIGHT:
+      initFireLight(thisConfig);
+      break;
+    default:
+      thisConfig->mode = MODE_AUDIO_FIRE_MODE_2;
+      initModeConfig(thisConfig);
+      break;
+  }
+}
+
+void printConfig() {
+
+  Serial.println("MainConfig");
+  Serial.print("configNbr:    "); Serial.println(mainConfig->mode, HEX);
+  Serial.print("# of Configs: "); Serial.println(mainConfig->PAR_NUMEROF_CONFIGS);
+  Serial.print("sizeOfConfig: "); Serial.println(sizeof(configuration) * (mainConfig->PAR_NUMEROF_CONFIGS + 1));
+  Serial.print("Debug_Level: "); Serial.println(mainConfig->PAR_DEBUG_LEVEL);
+  Serial.println("-");
+  Serial.println("ModeConfig");
+  Serial.print("ModeNumber : "); Serial.println(modeConfig->mode, HEX);
+  for (int i = 0; i < 10; i++) {
+    Serial.print("pi"); Serial.print(i); Serial.print(":"); Serial.print(modeConfig->p[i].pInt); Serial.print(" / "); Serial.print("pd"); Serial.print(i); Serial.print(":"); Serial.println(modeConfig->p[i].pDouble);
+  }
+
+  switch (modeConfig->mode) {
+    case MODE_AUDIO_FIRE_MODE_1:
+      //printConfigAudioFireMode1(modeConfig);
+      break;
+    case MODE_AUDIO_FIRE_MODE_2:
+      printConfigAudioFireMode2(modeConfig);
+      break;
+    case MODE_FIRE_LIGHT:
+      //printConfiginitFireLight(modeConfig);
+      break;
+    default:
+      break;
   }
 }

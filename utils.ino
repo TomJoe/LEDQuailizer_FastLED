@@ -239,3 +239,21 @@ void printConfig() {
       break;
   }
 }
+
+double mapFloat(double input, double startIn, double endIn, double startOut, double endOut) {
+  double mappedValue;
+
+  if (startIn < endIn) {
+    if (input > endIn) input = endIn;
+    if (input < startIn) input = startIn;
+  }
+
+   if (startIn > endIn) {
+    if (input < endIn) input = endIn;
+    if (input > startIn) input = startIn;
+  }
+  
+  mappedValue = startOut + (input - startIn) * (endOut - startOut)/(endIn - startIn);
+
+  return mappedValue;
+}

@@ -1,9 +1,7 @@
 #define INI_FREQ_AVG_2_TRIGGER_RATION 1.2
 #define INI_FILTER_LENGTH 250.0
-#define INI_DECAY_PER_FRAME 0.3 
+#define INI_DECAY_PER_FRAME 0.3
 #define INI_STREAK_LENGTH 0.25
-
-#define GF "
 
 #define PAR_FREQ_AVG_2_TRIGGER_RATION p[0].pDouble
 #define PAR_FILTER_LENGTH p[1].pDouble
@@ -18,12 +16,46 @@ void initAudioFireMode2(configuration *thisConfig) {
   thisConfig->PAR_STREAK_LENGTH = INI_STREAK_LENGTH;
 }
 
+void readAnalogInput(int potiNumber) {
+  int sensorPin;
+  int value;
+  double mappedParaValue;
+  switch (potiNumber) {
+    case 1:
+      value = analogRead(A1);
+      mappedParaValue = mapFloat(value, 10, 1000, 0.5, 2.0);
+      if (modeConfig->PAR_FREQ_AVG_2_TRIGGER_RATION != mappedParaValue) {
+        modeConfig->PAR_FREQ_AVG_2_TRIGGER_RATION  = mappedParaValue;
+        Serial.print("1: value: "); Serial.print(value); Serial.print(" / mapped: "); Serial.println(mappedParaValue);
+      }
+      break;
+    case 2:
+      value = analogRead(A2);
+      mappedParaValue = mapFloat(value, 10, 1000, 0.1, 1.0);
+      if (modeConfig->PAR_DECAY_PER_FRAME != mappedParaValue) {
+        modeConfig->PAR_DECAY_PER_FRAME  = mappedParaValue;
+        Serial.print("2: value: "); Serial.print(value); Serial.print(" / mapped: "); Serial.println(mappedParaValue);
+      }
+      break;
+    case 3:
+      value = analogRead(A3);
+      mappedParaValue = mapFloat(value, 10, 1000, 0.0, 1.0);
+      if (modeConfig->PAR_STREAK_LENGTH != mappedParaValue) {
+        modeConfig->PAR_STREAK_LENGTH  = mappedParaValue;
+        Serial.print("3: value: "); Serial.print(value); Serial.print(" / mapped: "); Serial.println(mappedParaValue);
+      }
+      break;
+
+  }
+
+}
+
 void printConfigAudioFireMode2(configuration *thisConfig) {
-  char[100] = "\"PAR_FREQ_AVG_2_TRIGGER_RATION\"";
-  Serial.print("PAR_FREQ_AVG_2_TRIGGER_RATION: ");Serial.print(GF PAR_FREQ_AVG_2_TRIGGER_RATION GF);Serial.println(thisConfig->PAR_FREQ_AVG_2_TRIGGER_RATION);
-  Serial.print("PAR_FILTER_LENGTH: ");Serial.println(thisConfig->PAR_FILTER_LENGTH);
-  Serial.print("PAR_DECAY_PER_FRAME: ");Serial.println(thisConfig->PAR_DECAY_PER_FRAME);
-  Serial.print("PAR_STREAK_LENGTH: ");Serial.println(thisConfig->PAR_STREAK_LENGTH);
+
+  Serial.print("PAR_FREQ_AVG_2_TRIGGER_RATION: "); Serial.println(thisConfig->PAR_FREQ_AVG_2_TRIGGER_RATION);
+  Serial.print("PAR_FILTER_LENGTH: "); Serial.println(thisConfig->PAR_FILTER_LENGTH);
+  Serial.print("PAR_DECAY_PER_FRAME: "); Serial.println(thisConfig->PAR_DECAY_PER_FRAME);
+  Serial.print("PAR_STREAK_LENGTH: "); Serial.println(thisConfig->PAR_STREAK_LENGTH);
 }
 
 void AudioFireMode2(configuration *thisConfig) {
@@ -33,9 +65,12 @@ void AudioFireMode2(configuration *thisConfig) {
   frame++;
 
   Audio.ReadFreq(FreqVal);
+  readAnalogInput(1);
+  readAnalogInput(2);
+  readAnalogInput(3);
   fill_solid(leds, NUM_LEDS, 0);
 
-  for (int i = 0; i < 7; i++) {
+  for (int i = 1; i < 6; i++) {
     if (FreqVal[i] > (thisConfig->PAR_FREQ_AVG_2_TRIGGER_RATION * FreqVqlAvg[i])) {
       FreqValLevel[i] = 128;
       if (hold[i] == 0) {
@@ -62,9 +97,9 @@ void AudioFireMode2(configuration *thisConfig) {
         break;
       case 1:
       case 2:
-        middleIdx = (NUM_LEDS) * (i-1);
+        middleIdx = (NUM_LEDS) * (i - 1);
         pulseLength = (double) NUM_LEDS * thisConfig->PAR_STREAK_LENGTH * (double)FreqVal[i] / (double)FreqVqlAvg[i];
-        palStart = 255 - (64 * i);
+        palStart = 32 * state[i] ;
         palStep = 0;
         brightnessDecay = 0.9;
         break;
@@ -76,7 +111,7 @@ void AudioFireMode2(configuration *thisConfig) {
         pulseLength = (double)FreqVal[i] / (double)FreqVqlAvg[i] * 3;
         palStart = (i * 32);
         palStep = +2.0;
-        brightnessDecay = 0.8;
+        brightnessDecay = 0.5;
         break;
       case 6:
         break;

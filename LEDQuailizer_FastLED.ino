@@ -15,9 +15,12 @@
 
 #define LED_PIN     8 //Anpassen
 #define CLK_PIN     7 //brauchst du nicht
-#define COLOR_ORDER BGR //Anpassen
+
+//#define COLOR_ORDER BGR //Anpassen
+#define COLOR_ORDER RGB //Anpassen
+
 #define CHIPSET     WS2801 //CHIPSET anpassen
-#define NUM_LEDS    80 //Anpassen
+#define NUM_LEDS    50 //Anpassen
 
 #endif
 

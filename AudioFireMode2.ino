@@ -70,12 +70,11 @@ void AudioFireMode2(configuration *thisConfig) {
   readAnalogInput(3);
   fill_solid(leds, NUM_LEDS, 0);
 
-  for (int i = 1; i < 6; i++) {
+  for (int i = 0; i < 7; i++) {
     if (FreqVal[i] > (thisConfig->PAR_FREQ_AVG_2_TRIGGER_RATION * FreqVqlAvg[i])) {
-      FreqValLevel[i] = 128;
+      FreqValLevel[i] = 255;
       if (hold[i] == 0) {
-        state[i]++;
-        if (state[i] > 16) state[i] = 0;
+        state[i] = random(NUM_LEDS);
       }
       hold[i] = 1;
     } else {
@@ -93,27 +92,25 @@ void AudioFireMode2(configuration *thisConfig) {
 
 
     switch (i) {
-      case 0:
-        break;
+      case 0: 
       case 1:
       case 2:
-        middleIdx = (NUM_LEDS) * (i - 1);
+        middleIdx = (NUM_LEDS / 2) * (i);
         pulseLength = (double) NUM_LEDS * thisConfig->PAR_STREAK_LENGTH * (double)FreqVal[i] / (double)FreqVqlAvg[i];
         palStart = 32 * state[i] ;
         palStep = 0;
-        brightnessDecay = 0.9;
+        brightnessDecay = 1.0;
         break;
 
       case 3:
       case 4:
       case 5:
-        middleIdx = (NUM_LEDS / 16.0) * (state[i]);
-        pulseLength = (double)FreqVal[i] / (double)FreqVqlAvg[i] * 3;
-        palStart = (i * 32);
-        palStep = +2.0;
-        brightnessDecay = 0.5;
-        break;
       case 6:
+        middleIdx = state[i];
+        pulseLength = (double) NUM_LEDS / 20 * (double)FreqVal[i] / (double)FreqVqlAvg[i] ;
+        palStart = (i * 32);
+        palStep = 0;
+        brightnessDecay = 1.0;
         break;
     }
 

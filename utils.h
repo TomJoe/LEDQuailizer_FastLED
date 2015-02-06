@@ -1,4 +1,4 @@
-#define MAGIC_BYTE_START 0xafcf
+#define MAGIC_BYTE_START 0xaffe
 #define MAGIC_BYTE_END 0xfafc
 
 #define RETURN_FAILED -1

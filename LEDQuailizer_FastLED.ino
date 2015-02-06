@@ -4,25 +4,15 @@
 
 //#define RENE //so lassen, dann sollte es klappen
 
-#ifdef RENE
+//#incluie "rene.h"
+#include "thomas_old_strip.h"
+//#include "thomas_neu_strip.h"
 
-#define DATA_PIN      5 //Anpassen
-#define COLOR_ORDER   GRB //Anpassen
-#define CHIPSET       WS2811 //CHIPSET anpassen  
-#define NUM_LEDS      50 //Anpassen
+//Status Leds
 
-#else
-
-#define LED_PIN     8 //Anpassen
-#define CLK_PIN     7 //brauchst du nicht
-
-//#define COLOR_ORDER BGR //Anpassen
-#define COLOR_ORDER RGB //Anpassen
-
-#define CHIPSET     WS2801 //CHIPSET anpassen
-#define NUM_LEDS    50 //Anpassen
-
-#endif
+#define STATUS_DATA_PIN 11
+#define STATUS_CLOCK_PIN 10
+#define STATUS_NUM_LEDS 10
 
 #define INI_BRIGHTNESS  255
 #define INI_FRAMES_PER_SECOND 50
@@ -36,21 +26,12 @@
 //mit dem Wert kannst rumspielen - 1024
 
 CRGB leds[NUM_LEDS];
+CRGB statusLeds[NUM_LEDS];
 CRGBPalette16 gPal, nPal;
 
 #define PAR_NUMEROF_CONFIGS   p[0].pInt
 #define PAR_DEBUG_LEVEL       p[1].pInt
 #define PAR_FRAMES_PER_SECOND p[2].pInt
-
-#ifdef RENE
-
-Analyzer Audio = Analyzer(6, 7, 0); //Strobe pin ->6  RST pin ->7 Analog Pin ->0 //Anpassen
-
-#else
-
-Analyzer Audio = Analyzer(6, 5, A0)   ; //Strobe pin ->4  RST pin ->3 Analog Pin ->5 //Anpassen
-
-#endif
 
 int FreqVal[7];
 int FreqValLevel[7];
@@ -74,6 +55,8 @@ void setup() {
   FastLED.addLeds<CHIPSET, LED_PIN, CLK_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );
 
 #endif
+
+FastLED.addLeds<WS2801, STATUS_DATA_PIN, STATUS_CLOCK_PIN, BGR>(statusLeds, STATUS_NUM_LEDS);
 
   FastLED.setBrightness( INI_BRIGHTNESS );
 
@@ -100,15 +83,17 @@ void setup() {
 
 void loop()
 {
-  // Add entropy to random number generator; we use a lot of it.
   frame++;
-  random16_add_entropy( random());
+  
+  
+  Audio.ReadFreq(FreqVal);
+  renderStatus();
+  
 
   //AudioFire(1);
   AudioFireMode2(modeConfig);
   //Fire(0);
- //if (FreqVal[i] > 1000) overload = 5;
-
+  
   if (overload > 0) {
     fill_solid(leds, NUM_LEDS, CRGB::Red);
     overload--;

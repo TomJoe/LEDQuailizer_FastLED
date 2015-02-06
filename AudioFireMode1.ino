@@ -9,9 +9,6 @@ void initAudioFireMode1(configuration *thisConfig) {
 
 void AudioFireMode1(int mode) {
   
-  frame++;
-
-  Audio.ReadFreq(FreqVal);
   fill_solid(leds, NUM_LEDS, 0);
 
   for (int i = 0; i < 7; i++) {

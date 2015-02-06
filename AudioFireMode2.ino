@@ -23,7 +23,7 @@ void readAnalogInput(int potiNumber) {
   switch (potiNumber) {
     case 1:
       value = analogRead(A1);
-      mappedParaValue = mapFloat(value, 10, 1000, 0.5, 2.0);
+      mappedParaValue = mapFloat(value, 10, 1000, 0.8, 1.5);
       if (modeConfig->PAR_FREQ_AVG_2_TRIGGER_RATION != mappedParaValue) {
         modeConfig->PAR_FREQ_AVG_2_TRIGGER_RATION  = mappedParaValue;
         Serial.print("1: value: "); Serial.print(value); Serial.print(" / mapped: "); Serial.println(mappedParaValue);
@@ -39,7 +39,7 @@ void readAnalogInput(int potiNumber) {
       break;
     case 3:
       value = analogRead(A3);
-      mappedParaValue = mapFloat(value, 10, 1000, 0.0, 1.0);
+      mappedParaValue = mapFloat(value, 10, 1000, 0.1, 1.0);
       if (modeConfig->PAR_STREAK_LENGTH != mappedParaValue) {
         modeConfig->PAR_STREAK_LENGTH  = mappedParaValue;
         Serial.print("3: value: "); Serial.print(value); Serial.print(" / mapped: "); Serial.println(mappedParaValue);
@@ -62,12 +62,11 @@ void AudioFireMode2(configuration *thisConfig) {
 
   static int state[7];
   static int hold[7];
-  frame++;
-
-  Audio.ReadFreq(FreqVal);
-  readAnalogInput(1);
+  
+  /*readAnalogInput(1);
   readAnalogInput(2);
-  readAnalogInput(3);
+  readAnalogInput(3);*/
+  
   fill_solid(leds, NUM_LEDS, 0);
 
   for (int i = 0; i < 7; i++) {

@@ -3,7 +3,7 @@
 #define LEFT -2
 #define RIGHT 2
 #define NUM_SEGMENTS 3
-#define FIRE_LEDS_MAX 100
+#define FIRE_LEDS_MAX 50
 
 // COOLING: How much does the air cool as it rises?
 // Less cooling = taller flames.  More cooling = shorter flames.

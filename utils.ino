@@ -2,6 +2,7 @@
 
 #define PAR_DEBUG_LEVEL p[1].pInt
 #define PAR_NUMEROF_CONFIGS p[0].pInt
+#define PAR_CUTOFF_LEVEL p[2].pInt
 
 //fill a strip "pLeds" from "pLedStartIdx" to "pLedEndIdx" uding a 256color-Palette "gPal"
 // starting with color at palette index "pPalStart" and modulating color for each next Pixel with "pPalStep"
@@ -22,6 +23,21 @@ void fill_palette_float(CRGB* pLeds , int pLedStartIdx , int pLedEndIdx , double
       pBrightness *= pBrightnessDecay;
     }
   }
+}
+
+int renderStatus() {
+  for (int i = 0; i < 7; i++) {
+    CRGB statusColor = CRGB(0, 0, 0);
+    if (FreqVal[i] > mainConfig->PAR_CUTOFF_LEVEL) statusColor = CRGB(0, FreqVal[i] / 4, 0);
+    if (FreqVal[i] > 800) statusColor = CRGB(100, 100, 0);
+    if (FreqVal[i] > 1000) statusColor = CRGB(100, 0, 0);
+    statusLeds[i] = statusColor;
+  }
+  
+  statusLeds[7] = ColorFromPalette(nPal,32,50,BLEND);
+  statusLeds[8] = ColorFromPalette(nPal,64,50,BLEND);
+  statusLeds[9] = ColorFromPalette(nPal,128,50,BLEND);
+  
 }
 
 int saveConfig() {
@@ -128,6 +144,7 @@ void initConfig() {
 
     mainConfig->mode = 0; //configuration to use on launch
     mainConfig->PAR_NUMEROF_CONFIGS = 0; //Number of Configs
+    mainConfig-> PAR_CUTOFF_LEVEL = 100; 
 
     addConfig();
   }
@@ -248,12 +265,12 @@ double mapFloat(double input, double startIn, double endIn, double startOut, dou
     if (input < startIn) input = startIn;
   }
 
-   if (startIn > endIn) {
+  if (startIn > endIn) {
     if (input < endIn) input = endIn;
     if (input > startIn) input = startIn;
   }
-  
-  mappedValue = startOut + (input - startIn) * (endOut - startOut)/(endIn - startIn);
+
+  mappedValue = startOut + (input - startIn) * (endOut - startOut) / (endIn - startIn);
 
   return mappedValue;
 }

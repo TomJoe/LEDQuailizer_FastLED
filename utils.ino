@@ -26,8 +26,8 @@ void fill_palette_float(CRGB* pLeds , int pLedStartIdx , int pLedEndIdx , double
 }
 
 int renderStatus() {
+  CRGB statusColor = CRGB(0, 0, 0);
   for (int i = 0; i < 7; i++) {
-    CRGB statusColor = CRGB(0, 0, 0);
     if (FreqVal[i] > mainConfig->PAR_CUTOFF_LEVEL) statusColor = CRGB(0, FreqVal[i] / 4, 0);
     if (FreqVal[i] > 800) statusColor = CRGB(100, 100, 0);
     if (FreqVal[i] > 1000) statusColor = CRGB(100, 0, 0);
@@ -157,7 +157,7 @@ void initConfig() {
 //
 
 void readSerial() {
-  char str[80];
+  char str[40];
   int x = Serial.available();
   if (x > 0) {
     delay(100);

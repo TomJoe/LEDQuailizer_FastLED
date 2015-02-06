@@ -4,9 +4,9 @@
 
 //#define RENE //so lassen, dann sollte es klappen
 
-//#incluie "rene.h"
+//#include "rene.h"
 #include "thomas_old_strip.h"
-//#include "thomas_neu_strip.h"
+//#include "thomas_new_strip.h"
 
 //Status Leds
 
@@ -16,17 +16,16 @@
 
 #define INI_BRIGHTNESS  255
 #define INI_FRAMES_PER_SECOND 50
-#define INI_CUT_OFF_LEVEL_0 60
-#define INI_CUT_OFF_LEVEL_1 70
+#define INI_CUT_OFF_LEVEL_0 30
+#define INI_CUT_OFF_LEVEL_1 50
 #define INI_CUT_OFF_LEVEL_2 70
 #define INI_CUT_OFF_LEVEL_3 90
 #define INI_CUT_OFF_LEVEL_4 150
 #define INI_CUT_OFF_LEVEL_5 150
 #define INI_CUT_OFF_LEVEL_6 100
-//mit dem Wert kannst rumspielen - 1024
 
 CRGB leds[NUM_LEDS];
-CRGB statusLeds[NUM_LEDS];
+CRGB statusLeds[STATUS_NUM_LEDS];
 CRGBPalette16 gPal, nPal;
 
 #define PAR_NUMEROF_CONFIGS   p[0].pInt
@@ -46,17 +45,13 @@ void setup() {
   //delay(3000); // sanity delay
   Serial.begin(57600);
 
-#ifdef RENE
-
-  FastLED.addLeds<CHIPSET, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS);
-
+#ifdef CLK_PIN
+  FastLED.addLeds<CHIPSET, DATA_PIN, CLK_PIN, COLOR_ORDER>(leds, NUM_LEDS);
 #else
-
-  FastLED.addLeds<CHIPSET, LED_PIN, CLK_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );
-
+  FastLED.addLeds<CHIPSET, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS);
 #endif
 
-FastLED.addLeds<WS2801, STATUS_DATA_PIN, STATUS_CLOCK_PIN, BGR>(statusLeds, STATUS_NUM_LEDS);
+  FastLED.addLeds<WS2801, STATUS_DATA_PIN, STATUS_CLOCK_PIN, BGR>(statusLeds, STATUS_NUM_LEDS);
 
   FastLED.setBrightness( INI_BRIGHTNESS );
 

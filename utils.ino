@@ -4,6 +4,16 @@
 #define PAR_NUMEROF_CONFIGS p[0].pInt
 #define PAR_CUTOFF_LEVEL p[2].pInt
 
+#define btn1 2
+#define btn2 3
+#define btn3 4
+
+boolean holdPoti[3];
+boolean lockPoti[3];
+int buttonDebounce[3];
+int buttonState[3];
+int analog[3];
+
 //fill a strip "pLeds" from "pLedStartIdx" to "pLedEndIdx" uding a 256color-Palette "gPal"
 // starting with color at palette index "pPalStart" and modulating color for each next Pixel with "pPalStep"
 // using Brightness "pBrightness" and modulating brightness for each next pixel with "pBrightnessDecy"
@@ -25,7 +35,100 @@ void fill_palette_float(CRGB* pLeds , int pLedStartIdx , int pLedEndIdx , double
   }
 }
 
+
+void setupPotis() {
+  for (int i = 0; i < 3; i++) {
+    holdPoti[i] = false;
+    lockPoti[i] = false;
+  }
+}
+
+void readPotis() {
+  analog[0] = (2 * analog[0] + analogRead(A1)) / 3;
+  analog[1] = (2 * analog[1] + analogRead(A2)) / 3;
+  analog[2] = (2 * analog[2] + analogRead(A3)) / 3;
+}
+
+void setupButtons() {
+  pinMode(btn1, INPUT_PULLUP);
+  pinMode(btn2, INPUT_PULLUP);
+  pinMode(btn3, INPUT_PULLUP);
+}
+
+
+void readButtons() {
+
+  int currButton;
+  for (int i = 0; i < 3; i++) {
+    switch (i) {
+      case 0:
+        currButton = digitalRead(btn1);
+        break;
+      case 1:
+        currButton = digitalRead(btn2);
+        break;
+      case 2:
+        currButton = digitalRead(btn3);
+        break;
+    }
+
+    if (currButton == LOW ) buttonDebounce[i] = min(buttonDebounce[i]++, LONG_PRESS);
+    else buttonDebounce[i] = 0;
+
+    if (buttonDebounce[i] > SHORT_PRESS) buttonState[i] = BUTTON_PRESSED;
+    if (buttonDebounce[i] >= LONG_PRESS) buttonState[i] = BUTTON_LONGPRESSED;
+  }
+
+  if (buttonState[0] == BUTTON_PRESSED) {
+    lockPoti[0] = true; lockPoti[1] = true; lockPoti[2] = true;
+  }
+
+  if (buttonState[0] == BUTTON_LONGPRESSED) {
+    lockPoti[0] = false; lockPoti[1] = false; lockPoti[2] = false;
+    holdPoti[0] = true; holdPoti[1] = true; holdPoti[2] = true;
+  }
+
+}
+
+double readPoti(int potiNbr, double currentValue, double mapLow, double mapHigh) {
+  double returnValue = currentValue;
+  double newValue = mapFloat(analog[potiNbr], 10, 1000, mapLow, mapHigh);
+
+  if (potiNbr >= 3 || potiNbr < 0) {
+    returnValue = 0;
+  } else {
+    if (!lockPoti[potiNbr]) {
+      if (holdPoti[potiNbr] && (abs((currentValue - newValue) / (mapHigh - mapLow)) < 0.05)) holdPoti[potiNbr] = false;
+#ifdef VERBOSE
+      Serial.print("cV: "); Serial.print(currentValue); Serial.print(" /nV: "); Serial.println(newValue);
+#endif
+      if (!holdPoti[potiNbr]) returnValue = newValue;
+    }
+  }
+  return returnValue;
+}
+
 int renderStatus() {
+  if ((millis() % 1000 <= 100) && (mainConfig->PAR_DEBUG_LEVEL == 0) ) {
+
+#ifdef VERBOSE
+    Serial.println("Average: ");
+#endif
+
+    for (int i = 0; i < 7; i++) {
+
+      Serial.print((int)FreqVqlAvg[i]);
+      if (i < 6)  Serial.print(",");
+      else Serial.println();
+
+    }
+    Serial.println();
+    
+    Serial.print(t1_millis_avg); Serial.print(",");Serial.print(t2_millis_avg); Serial.print(",");Serial.print(t3_millis_avg); Serial.print(",");Serial.print(t4_millis_avg); Serial.println();
+
+  }
+  
+  
   CRGB statusColor = CRGB(0, 0, 0);
   for (int i = 0; i < 7; i++) {
     if (FreqVal[i] > mainConfig->PAR_CUTOFF_LEVEL) statusColor = CRGB(0, FreqVal[i] / 4, 0);
@@ -33,11 +136,13 @@ int renderStatus() {
     if (FreqVal[i] > 1000) statusColor = CRGB(100, 0, 0);
     statusLeds[i] = statusColor;
   }
-  
-  statusLeds[7] = ColorFromPalette(nPal,32,50,BLEND);
-  statusLeds[8] = ColorFromPalette(nPal,64,50,BLEND);
-  statusLeds[9] = ColorFromPalette(nPal,128,50,BLEND);
-  
+
+  for (int i = 0; i < 3; i++) {
+
+    statusLeds[7 + i] = CRGB(0, 50, 0);
+    if (holdPoti[i]) statusLeds[7 + i] = CRGB(50, 50, 0);
+    if (lockPoti[i]) statusLeds[7 + i] = CRGB(50, 0, 0);
+  }
 }
 
 int saveConfig() {
@@ -55,7 +160,9 @@ int saveConfig() {
     EEPROM.write(i + mainConfig->mode * sizeof(configuration), a);
   }
 
+#ifdef VERBOSE
   Serial.println("Config saved");
+#endif
 
   rtn = 0;
 
@@ -79,7 +186,11 @@ int readConfig(int configNumber) {
     }
 
     rtn = configNumber;
+
+#ifdef VERBOSE
     Serial.print("Nbr of config loaded:"); Serial.println(configNumber);
+#endif
+
   }
 
   return rtn;
@@ -96,12 +207,13 @@ configuration* addConfig() {
     modeConfig->magicByteStart = MAGIC_BYTE_START;
     modeConfig->magicByteEnd = MAGIC_BYTE_END;
 
-    modeConfig->mode = MODE_AUDIO_FIRE_MODE_2;
+    modeConfig->mode = MODE_FIRE_LIGHT;
 
     initModeConfig(modeConfig);
 
+#ifdef VERBOSE
     Serial.print("Config added: "); Serial.println(mainConfig->mode);
-
+#endif
 
     rtn = modeConfig;
 
@@ -116,12 +228,18 @@ configuration* addConfig() {
 
 void initConfig() {
   //read Main Config
+
+#ifdef VERBOSE
   Serial.print("*mainConfig : "); Serial.println((int) mainConfig, HEX);
+#endif
+
   if (mainConfig == NULL) mainConfig = (configuration*) malloc(sizeof(configuration));
+
+#ifdef VERBOSE
   Serial.print("*mainConfig : "); Serial.println((int) mainConfig, HEX);
   Serial.print("sizeof(configuration) : "); Serial.println(sizeof(configuration));
   Serial.print("sizeof(*mainConfig) : "); Serial.println(sizeof(*mainConfig) );
-
+#endif
   // read MainConfig
 
   for (int i = 0; i < sizeof(configuration); i++) {
@@ -130,21 +248,26 @@ void initConfig() {
   }
 
   if (mainConfig->magicByteStart == MAGIC_BYTE_START && mainConfig->magicByteEnd == MAGIC_BYTE_END) {
+
+#ifdef VERBOSE
     Serial.println("Config loaded");
     Serial.print("number of Configs: "); Serial.println(mainConfig->PAR_NUMEROF_CONFIGS);
+#endif
 
     if (mainConfig->PAR_NUMEROF_CONFIGS > 0) readConfig(mainConfig->PAR_NUMEROF_CONFIGS);
 
   } else {
+#ifdef VERBOSE
     Serial.println("No valid config found. Creating new Config.");
     Serial.println("type 'save' to save config");
+#endif
 
     mainConfig->magicByteStart = MAGIC_BYTE_START;
     mainConfig->magicByteEnd = MAGIC_BYTE_END;
 
     mainConfig->mode = 0; //configuration to use on launch
     mainConfig->PAR_NUMEROF_CONFIGS = 0; //Number of Configs
-    mainConfig-> PAR_CUTOFF_LEVEL = 100; 
+    mainConfig->PAR_CUTOFF_LEVEL = 100;
 
     addConfig();
   }
@@ -230,6 +353,7 @@ void initModeConfig(configuration * thisConfig) {
 
 void printConfig() {
 
+#ifdef VERBOSE
   Serial.println("MainConfig");
   Serial.print("configNbr:    "); Serial.println(mainConfig->mode, HEX);
   Serial.print("# of Configs: "); Serial.println(mainConfig->PAR_NUMEROF_CONFIGS);
@@ -241,6 +365,7 @@ void printConfig() {
   for (int i = 0; i < 10; i++) {
     Serial.print("pi"); Serial.print(i); Serial.print(":"); Serial.print(modeConfig->p[i].pInt); Serial.print(" / "); Serial.print("pd"); Serial.print(i); Serial.print(":"); Serial.println(modeConfig->p[i].pDouble);
   }
+#endif
 
   switch (modeConfig->mode) {
     case MODE_AUDIO_FIRE_MODE_1:
@@ -274,3 +399,4 @@ double mapFloat(double input, double startIn, double endIn, double startOut, dou
 
   return mappedValue;
 }
+

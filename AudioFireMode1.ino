@@ -7,7 +7,7 @@ void initAudioFireMode1(configuration *thisConfig) {
   thisConfig->p[1].pDouble = FILTER_LENGTH;
 }
 
-void AudioFireMode1(int mode) {
+void AudioFireMode1() {
   
   fill_solid(leds, NUM_LEDS, 0);
 

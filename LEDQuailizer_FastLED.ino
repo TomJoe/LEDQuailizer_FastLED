@@ -5,8 +5,8 @@
 //#define RENE //so lassen, dann sollte es klappen
 
 //#include "rene.h"
-#include "thomas_old_strip.h"
-//#include "thomas_new_strip.h"
+//#include "thomas_old_strip.h"
+#include "thomas_new_strip.h"
 
 //Status Leds
 
@@ -28,9 +28,13 @@ CRGB leds[NUM_LEDS];
 CRGB statusLeds[STATUS_NUM_LEDS];
 CRGBPalette16 gPal, nPal;
 
+long t1_millis, t2_millis, t3_millis, t4_millis;
+long _t1_millis;
+long t1_millis_avg, t2_millis_avg, t3_millis_avg , t4_millis_avg;
+
 #define PAR_NUMEROF_CONFIGS   p[0].pInt
 #define PAR_DEBUG_LEVEL       p[1].pInt
-#define PAR_FRAMES_PER_SECOND p[2].pInt
+//#define PAR_FRAMES_PER_SECOND p[2].pInt
 
 int FreqVal[7];
 int FreqValLevel[7];
@@ -71,48 +75,52 @@ void setup() {
 
   gPal = HeatColors_p;
   nPal = PartyColors_p;
+  setupButtons();
+  setupPotis();
+
   Audio.Init();
-  
+
   initConfig();
 }
 
 void loop()
 {
   frame++;
-  
-  
+
+  _t1_millis = t1_millis;
+  t1_millis = millis();
+  t1_millis_avg = (9 * t1_millis_avg + (t1_millis - _t1_millis)) / 10;
+
+  readPotis();
+  readButtons();
   Audio.ReadFreq(FreqVal);
   renderStatus();
-  
 
-  //AudioFire(1);
-  AudioFireMode2(modeConfig);
-  //Fire(0);
-  
-  if (overload > 0) {
-    fill_solid(leds, NUM_LEDS, CRGB::Red);
-    overload--;
-    if (overload == 1)
-      Serial.println("overload!");
+  switch (modeConfig->mode)
+  {
+    case AUDIO_FIRE_1:
+      AudioFireMode1(); break;
+    case AUDIO_FIRE_2:
+      AudioFireMode2(); break;
+    case FIRE_LIGHT:
+      Fire(); break;
   }
 
-  if ((frame % (5 * INI_FRAMES_PER_SECOND) == 0) && (mainConfig->PAR_DEBUG_LEVEL == 0) ) {
+  t2_millis = millis();
+  t2_millis_avg = (9 * t2_millis_avg + (t2_millis - t1_millis)) / 10;
 
-    Serial.println("Average: ");
-    for (int i = 0; i < 7; i++) {
+  readSerial();
 
-      Serial.print((int)FreqVqlAvg[i]);
-      if (i < 6)  Serial.print(",");
-      else Serial.println();
-
-    }
-    
-    Serial.println();
-  }
+  t3_millis = millis();
+  t3_millis_avg = (9 * t3_millis_avg + (t3_millis - t2_millis)) / 10;
 
   FastLED.show(); // display this frame
-  readSerial();
-  FastLED.delay(1000 / INI_FRAMES_PER_SECOND);
+
+  t4_millis = millis();
+  t4_millis_avg = (9 * t4_millis_avg + (t4_millis - t3_millis)) / 10;
+
+  
+  FastLED.delay(max((1000 / INI_FRAMES_PER_SECOND - t4_millis-t1_millis),0));
 }
 
 
